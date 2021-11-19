@@ -6,14 +6,12 @@
   import "../global.css"
   const dispatch = createEventDispatcher()
 
-  export let arr_html = [{ html: ``, klass: "p-2" }];
   export let editable = false
   export let html = "";
   export let uid = null;
 
-  $: html = arr_html
-    .map(h => `<div class='${h.klass}'>${h.html}</div>`)
-    .join("\n");
+  $: arr_html = [{html: html, klass: ''}]
+
   async function addNewElm(i, evt) {
     // split
     // get element index
