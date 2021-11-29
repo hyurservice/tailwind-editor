@@ -1,11 +1,13 @@
 <script>
 	import ColorList from './ColorList.svelte'
 	import DownIcon from '../Icons/DownIcon.svelte'
+	import FillIcon from "../Icons/FillIcon.svelte";
 	
 	export let txt = 'text'
 	export let setClass
 	// get color from klass
 	export let klass
+	export let fill = false;
 
 	$: posKlass = lNode?.getBoundingClientRect()?.bottom > window.innerHeight ? 'bottom-0 mb-8' : 'mt-8 top-0' 
 
@@ -44,7 +46,12 @@
 <svelte:window on:click={hideColors} />
 <div class="flex relative">	
 	<div class="font-medium flex items-center cursor-pointer {txt}-{selected_color} px-1" on:click={showColors}>
-		<span class="">A</span> <DownIcon />
+		{#if fill}
+			<FillIcon />
+		{:else}
+			<span class="">A</span>
+		{/if}
+		<DownIcon />
 	</div>
 	{#if show_colors}
 		<div class="absolute left-0 {posKlass} z-920 bg-white" bind:this={lNode}>	

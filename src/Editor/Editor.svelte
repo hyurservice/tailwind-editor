@@ -10,7 +10,10 @@
   export let html = "";
   export let uid = null;
 
-  $: arr_html = [{html: html, klass: ''}]
+  let fill_class, inner_html;
+
+  $: ({fill_class, inner_html} = extractFillClass(html));
+  $: arr_html = [{html: inner_html, klass: ''}]
 
   async function addNewElm(i, evt) {
     // split
@@ -54,6 +57,31 @@
   let href;
   let blank;
   let mouseX;
+
+  function setFillClass(cls) {
+      fill_class = cls;
+      contentUpdated();
+  }
+
+  const FILL_CLASS_NAME = 'fill';
+
+  function extractFillClass(html) {
+      if (!html) {
+          return {inner_html: html};
+      }
+      let div = document.createElement('div')
+      div.innerHTML = html
+      if (div.childNodes.length !== 1) {
+          return {inner_html: html};
+      }
+      const fillDiv = div.childNodes[0];
+      if (fillDiv.nodeName !== 'DIV' || !fillDiv.classList.contains(FILL_CLASS_NAME)) {
+          return {inner_html: html};
+      }
+
+      fillDiv.classList.remove(FILL_CLASS_NAME);
+      return {inner_html: fillDiv.innerHTML, fill_class: fillDiv.classList.value};
+  }
 
   function showToolBar(evt) {
     base_node = evt.detail.base_node;
@@ -160,8 +188,13 @@
   }
 
   function disaptchChange(){
+      const filled_arr_html = fill_class ? [
+              {html: `<div  class='${FILL_CLASS_NAME} ${fill_class}'>`, klass: ''},
+              ...arr_html,
+              {html: '</div>', klass: ''}]
+          : arr_html;
     setTimeout(() => {
-      dispatch('change', {uid, arr_html})
+      dispatch('change', {uid, arr_html: filled_arr_html})
     });
   }
 
@@ -207,9 +240,11 @@
   <ToolBar
     {setGClass}
     {setClass}
+    {setFillClass}
     {base_node}
     {g_classes}
     {classes}
+    {fill_class}
     {href}
     {blank}
     {mouseX}
@@ -220,7 +255,7 @@
 	<MediaInput setMedia={addMedia} delMedia={rmMedia} cancel={() => show_media= false} {base_node} {...img_props} {mouseX} />
 {/if}
 
-<div use:setListEditors key="ed">
+<div use:setListEditors key="ed" class={fill_class}>
   {#each arr_html as h, i}
     <ContentEditor
       editable={editable}

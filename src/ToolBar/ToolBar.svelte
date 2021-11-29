@@ -14,8 +14,10 @@
 	
 	export let setClass
 	export let setGClass
+	export let setFillClass
 	export let classes
 	export let g_classes
+	export let fill_class
 	export let href
 	export let blank
 	// export let setLink
@@ -219,7 +221,10 @@
 			<div class="px-1 cursor-pointer select-none hover:bg-gray-200 border-r h-full flex items-center">
 				<ColorPicker txt="bg" {setClass} klass={classes} />
 			</div>
-		
+			<div class="px-1 cursor-pointer select-none hover:bg-gray-200 border-r h-full flex items-center">
+				<ColorPicker txt="bg" setClass={setFillClass} klass={fill_class} fill={true}/>
+			</div>
+
 			<div class="px-2 { e_classes.justify ? 'text-blue-600':'text-gray-700'} cursor-pointer select-none hover:bg-gray-200 py-1 h-full flex items-center" on:mousedown={() => toggleG(STYLE.JUSTIFY)}>
 				<JustifyIcon />
 			</div>
