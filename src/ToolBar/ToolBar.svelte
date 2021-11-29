@@ -12,6 +12,7 @@
 	import {STYLE} from './const'
 	import Spacing from './Spacing.svelte';
 	
+	export let tools = ['headings', 'bold', 'italic', 'underline', 'linethrough', 'code', 'link', 'text-color', 'bg-color', 'justify', 'text-align', 'padding', 'margin', 'leading'];
 	export let setClass
 	export let setGClass
 	export let classes
@@ -191,54 +192,75 @@
 
 <div use:setPosition on:mousedown|stopPropagation class="flex fixed font-normal -mt-6 shadow bg-white z-950 text-base rounded">	
 	<div class="rounded flex items-center shadow-lg border border-gray-200  text-gray-700">
+		{#if tools.includes('headings')}
 			<div class="border-r">
 				<HeadingList setClass={setGClass} klass={g_classes} />	
 			</div>
+		{/if}
+		{#if tools.includes('bold')}
 			<div class="px-2 cursor-pointer select-none { e_classes.bold ? 'text-blue-600':''} font-medium hover:bg-gray-200 py-1" on:mousedown={toggleBold}>
 				B
 			</div>
+		{/if}
+		{#if tools.includes('italic')}
 			<div class="px-3 cursor-pointer select-none { e_classes.italic ? 'text-blue-600':''} italic hover:bg-gray-200 py-1" on:mousedown={() => toggle(STYLE.ITALIC)}>
 				i
 			</div>
+		{/if}
+		{#if tools.includes('underline')}
 			<div class="px-2 cursor-pointer select-none { e_classes.underline ? 'text-blue-600':''} underline hover:bg-gray-200 py-1" on:mousedown={() => toggle(STYLE.UNDERLINE)}>
 				U
 			</div>
+		{/if}
+		{#if tools.includes('linethrough')}
 			<div class="px-2 cursor-pointer select-none { e_classes.linethrough ? 'text-blue-600':''} line-through hover:bg-gray-200 py-1" on:mousedown={() => toggle(STYLE.LINETHROUGH)}>
 				S
 			</div>
+		{/if}
+		{#if tools.includes('code')}
 			<div class="px-2 cursor-pointer select-none { e_classes.code ? 'text-blue-600':''} line-through hover:bg-gray-200 py-2" on:mousedown={() => toggle(STYLE.CODE)}>
 				<CodeIcon />
 			</div>
+		{/if}
+		{#if tools.includes('link')}
 			<div class="{ e_classes.link ? 'text-blue-600':''} cursor-pointer select-none hover:bg-gray-200 text-sm border-r">
 				<LinkInput setLink={setClass} on:close={close} {href} {blank} />
 			</div>
-			
+		{/if}
+		{#if tools.includes('text-color')}
 			<div class="pl-1 cursor-pointer select-none hover:bg-gray-200 py-1 ">
 				<ColorPicker {setClass} klass={classes} />
 			</div>
+		{/if}
+		{#if tools.includes('bg-color')}
 			<div class="px-1 cursor-pointer select-none hover:bg-gray-200 border-r h-full flex items-center">
 				<ColorPicker txt="bg" {setClass} klass={classes} />
 			</div>
-		
+		{/if}
+		{#if tools.includes('justify')}
 			<div class="px-2 { e_classes.justify ? 'text-blue-600':'text-gray-700'} cursor-pointer select-none hover:bg-gray-200 py-1 h-full flex items-center" on:mousedown={() => toggleG(STYLE.JUSTIFY)}>
 				<JustifyIcon />
 			</div>
-			
+		{/if}
+		{#if tools.includes('text-align')}
 			<TextAlign {e_classes} on:select={(evt) => toggleG(evt.detail)} />
-			
+		{/if}
+		{#if tools.includes('padding')}
 			<div class="border-l h-full">
 				<Spacing mp="p" title="Padding" {g_classes} on:select={(evt) => toggleG(evt.detail)} />
 			</div>
-
+		{/if}
+		{#if tools.includes('margin')}
 			<div class="h-full">
 				<Spacing mp="m" title="Margin" {g_classes} on:select={(evt) => toggleG(evt.detail)} />
 			</div>
-			
+		{/if}
+		{#if tools.includes('leading')}
 			<div class="cursor-pointer select-none hover:bg-gray-200 h-full flex items-center border-l">
 				<Leading setClass={setGClass} klass={g_classes} />
 			</div>
-			
-			
+		{/if}
+
 	</div>
 </div>
 

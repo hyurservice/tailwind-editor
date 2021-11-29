@@ -8,6 +8,7 @@
 
   export let arr_html = [{ html: ``, klass: "p-2" }];
   export let editable = false
+  export let tools;
   export let html = "";
   export let uid = null;
 
@@ -207,6 +208,7 @@
 
 {#if show_toolbar && editable}
   <ToolBar
+    {tools}
     {setGClass}
     {setClass}
     {base_node}
