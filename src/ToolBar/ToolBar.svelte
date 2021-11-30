@@ -12,10 +12,11 @@
 	import {STYLE} from './const'
 	import Spacing from './Spacing.svelte';
 	
-	export let tools = ['headings', 'bold', 'italic', 'underline', 'linethrough', 'code', 'link', 'text-color', 'bg-color', 'fill-color', 'justify', 'text-align', 'padding', 'margin', 'leading'];
+	export let tools = ['headings', 'bold', 'italic', 'underline', 'linethrough', 'code', 'link', 'text-color', 'bg-color', 'fill-color', 'justify', 'text-align', 'padding', 'margin', 'leading', 'clear'];
 	export let setClass
 	export let setGClass
 	export let setFillClass
+	export let clearAllFormatting
 	export let classes
 	export let g_classes
 	export let fill_class
@@ -265,6 +266,13 @@
 		{#if tools.includes('leading')}
 			<div class="cursor-pointer select-none hover:bg-gray-200 h-full flex items-center border-l">
 				<Leading setClass={setGClass} klass={g_classes} />
+			</div>
+		{/if}
+		{#if tools.includes('clear')}
+			<div class="cursor-pointer select-none hover:bg-gray-200 h-full flex items-center border-l">
+				<div title="Remove all formatting" class="px-2 cursor-pointer select-none hover:bg-gray-200 py-1" on:mousedown={clearAllFormatting}>
+					&times;
+				</div>
 			</div>
 		{/if}
 

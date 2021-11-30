@@ -11,7 +11,7 @@
   export let html = "";
   export let uid = null;
 
-  let fill_class, inner_html;
+  let arr_html, fill_class, inner_html;
 
   $: ({fill_class, inner_html} = extractFillClass(html));
   $: arr_html = [{html: inner_html, klass: ''}]
@@ -82,6 +82,15 @@
 
       fillDiv.classList.remove(FILL_CLASS_NAME);
       return {inner_html: fillDiv.innerHTML, fill_class: fillDiv.classList.value};
+  }
+
+  function clearAllFormatting() {
+      const brMarker = '[*[__BR__]*]'
+      let div = document.createElement('div')
+      div.innerHTML = arr_html.map(a => a.html).join(' ').replaceAll('<br>', brMarker);
+      arr_html = [{html: div.innerText.replaceAll(brMarker, '<br>'), klass: ''}];
+      fill_class = undefined;
+      contentUpdated();
   }
 
   function showToolBar(evt) {
@@ -243,6 +252,7 @@
     {setGClass}
     {setClass}
     {setFillClass}
+    {clearAllFormatting}
     {base_node}
     {g_classes}
     {classes}
