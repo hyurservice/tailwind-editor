@@ -194,7 +194,7 @@
 	
 </script>
 
-<div use:setPosition on:mousedown|stopPropagation class="flex fixed font-normal -mt-6 shadow bg-white z-950 text-base rounded">	
+<div use:setPosition on:mousedown|stopPropagation class="se-toolbar flex fixed font-normal -mt-6 shadow bg-white z-950 text-base rounded">
 	<div class="rounded flex items-center shadow-lg border border-gray-200  text-gray-700">
 		{#if tools.includes('headings')}
 			<div class="border-r">
