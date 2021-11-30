@@ -51,7 +51,7 @@
 </script>
 
 <svelte:window on:click={hideList} />
-<div class="relative">
+<div class="se-dropdown relative">
 	<div class="cursor-pointer flex h-full" on:click={toggleList}>
 		<slot>Click To show</slot>
 	</div>

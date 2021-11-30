@@ -2,6 +2,7 @@
 	import ColorList from './ColorList.svelte'
 	import DownIcon from '../Icons/DownIcon.svelte'
 	import FillIcon from "../Icons/FillIcon.svelte";
+	import HighlighterIcon from "../Icons/HighlighterIcon.svelte";
 	
 	export let txt = 'text'
 	export let setClass
@@ -17,7 +18,7 @@
 		'gray','red','yellow','green','blue','indigo','purple','pink'
 	]
 	let show_colors = false
-	let selected_color = 'blue-500'
+	let selected_color = 'transparent'
 
 	$: if(klass){
 		let classes = klass.split(' ')
@@ -48,6 +49,8 @@
 	<div class="font-medium flex items-center cursor-pointer {txt}-{selected_color} px-1" on:click={showColors}>
 		{#if fill}
 			<FillIcon />
+		{:else if txt === 'bg'}
+			<HighlighterIcon />
 		{:else}
 			<span class="">A</span>
 		{/if}

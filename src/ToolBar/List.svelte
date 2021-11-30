@@ -13,9 +13,9 @@
 	}
 </script>
 
-<div class="shadow-xl border-r border-l rounded mt-1 bg-white">	
+<div class="se-list shadow-xl border-r border-l rounded mt-1 bg-white">
 	{#each list as elm}
-		<div class="px-2 py-1 flex items-center hover:bg-gray-200 cursor-pointer" on:click={(e) => select(e,elm.value)}>
+		<div class="se-item px-2 py-1 flex items-center hover:bg-gray-200 cursor-pointer" on:click={(e) => select(e,elm.value)}>
 			{#if selected == elm.value}
 				<CheckIcon />
 			{/if}
