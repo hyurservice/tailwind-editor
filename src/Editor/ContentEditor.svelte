@@ -542,44 +542,38 @@
 		arr_elms = n_arr
 	}
 
-	function toggleColor(arr,klass){
+	function toggleWith(arr,klass, pred){
 
 		for(let elm of arr){
 			if(elm.klass){
 				let classes = elm.klass.split(' ')
-				let s_color_index = classes.findIndex(c => klass.startsWith('text') ? reg_txt_color.test(c) : reg_bg_color.test(c))
-				let selected_color_class = ~s_color_index ? classes[s_color_index] : ''
-				if(selected_color_class){
-					// remove old selected color
-					elm.klass = elm.klass.replace(selected_color_class,'').trim()
+				let s_index = classes.findIndex(pred)
+				let selected_class = ~s_index ? classes[s_index] : ''
+				if(selected_class){
+					// remove old selected class
+					elm.klass = elm.klass.replace(selected_class,'').trim()
 				}
-				elm.klass = elm.klass.split(' ').concat([klass]).join(' ') 
+				elm.klass = elm.klass.split(' ').concat([klass]).join(' ')
 			}else{
 				elm.klass = klass
 			}
 		}
 
+	}
+	
+	function toggleColor(arr,klass){
+		toggleWith(arr, klass, c => klass.startsWith('text') ? reg_txt_color.test(c) : reg_bg_color.test(c));
 	}
 
 	function toggleFont(arr,klass){
-
-		for(let elm of arr){
-			if(elm.klass){
-				let classes = elm.klass.split(' ')
-				let s_font_index = classes.findIndex(c => reg_font.test(c))
-				let selected_font_class = ~s_font_index ? classes[s_font_index] : ''
-				if(selected_font_class){
-					// remove old selected color
-					elm.klass = elm.klass.replace(selected_font_class,'').trim()
-				}
-				elm.klass = elm.klass.split(' ').concat([klass]).join(' ') 
-			}else{
-				elm.klass = klass
-			}
-		}
-
+		toggleWith(arr, klass, c => reg_font.test(c));
 	}
 
+	function toggleTextSize(arr,klass){
+		arr.filter(elm => !!elm.klass).forEach(elm => elm.klass = elm.klass.replace(/md:text-(\w+)\stext-(\w+)/g, 'md:text-$1%%%text-$2'))
+		toggleWith(arr, klass, c => /md:text-(\w+)%%%text-(\w+)/.test(c));
+		arr.filter(elm => !!elm.klass).forEach(elm => elm.klass = elm.klass.replaceAll('%%%', ' '))
+	}
 
 	let code_class = 'code text-sm font-mono px-8 py-6 bg-gray-200'
 	let quote_class = 'quote text-xl border-l-4 border-gray-800 px-4 font-serif'
@@ -622,6 +616,12 @@
 		
 		if(reg_font.test(klass)){
 			toggleFont(arr,klass)
+			dispatch('changeClass')
+			return
+		}
+
+		if(reg_txt_size.test(klass)){
+			toggleTextSize(arr,klass)
 			dispatch('changeClass')
 			return
 		}

@@ -11,8 +11,9 @@
 	import TextAlign from './TextAlign.svelte';
 	import {STYLE} from './const'
 	import Spacing from './Spacing.svelte';
+	import FontSizeList from "./FontSizeList.svelte";
 	
-	export let tools = ['headings', 'bold', 'italic', 'underline', 'linethrough', 'code', 'link', 'text-color', 'bg-color', 'fill-color', 'justify', 'text-align', 'padding', 'margin', 'leading', 'clear'];
+	export let tools = ['headings', 'font-sizes', 'bold', 'italic', 'underline', 'linethrough', 'code', 'link', 'text-color', 'bg-color', 'fill-color', 'justify', 'text-align', 'padding', 'margin', 'leading', 'clear'];
 	export let setClass
 	export let setGClass
 	export let setFillClass
@@ -198,6 +199,11 @@
 		{#if tools.includes('headings')}
 			<div class="border-r">
 				<HeadingList setClass={setGClass} klass={g_classes} />	
+			</div>
+		{/if}
+		{#if tools.includes('font-sizes')}
+			<div class="border-r">
+				<FontSizeList setClass={setClass} klass={classes} />
 			</div>
 		{/if}
 		{#if tools.includes('bold')}
