@@ -74,8 +74,8 @@
 		let selection = window.getSelection()
 		let b_node = selection.anchorNode
 		let e_node = selection.focusNode
-		let start_i = selection.baseOffset
-		let end_i = selection.extentOffset
+		let start_i = selection.anchorOffset
+		let end_i = selection.focusOffset
 		if(!b_node) return
 		let elm_node = (b_node?.tagName=='DIV') ? b_node : b_node.parentNode.tagName == 'DIV' ? b_node.parentNode : b_node.parentNode.parentNode
 		
@@ -361,8 +361,8 @@
 	async function holdSelection(selection){
 		if(h_selection) return
 		h_selection = {
-			start_i: selection.baseOffset ,
-			end_i: selection.extentOffset ,
+			start_i: selection.anchorOffset ,
+			end_i: selection.focusOffset ,
 			
 			b_node: selection.anchorNode,
 			e_node: selection.focusNode
@@ -376,8 +376,8 @@
 		let selection = window.getSelection() 
 		let selection_txt = selection.toString()
 
-		let	start_i = h_selection ? h_selection.start_i : selection.baseOffset 
-		let end_i = h_selection ? h_selection.end_i : selection.extentOffset 
+		let	start_i = h_selection ? h_selection.start_i : selection.anchorOffset
+		let end_i = h_selection ? h_selection.end_i : selection.focusOffset
 		
 		let b_node = h_selection ? h_selection.b_node : selection.anchorNode
 		let e_node = h_selection ? h_selection.e_node : selection.focusNode
