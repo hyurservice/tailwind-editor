@@ -184,7 +184,7 @@
 				}
 				return
 			}
-			if(start_i==0 && (b_index==0 || b_index == -1)){
+			if(start_i==0 && (b_index==0 || b_index == -1) && !selection.toString()){
 				let l_node_index 
 				let l_node_end 
 				let pv_elm = elm_node.previousElementSibling
