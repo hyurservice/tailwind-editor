@@ -1,9 +1,9 @@
-<script>				
+<script>
 	import { createEventDispatcher} from 'svelte/internal'
 
 	import ColorPicker from './ColorPicker.svelte'
 	import CodeIcon from '../Icons/CodeIcon.svelte'
-	
+
 	import LinkInput from './LinkInput.svelte'
 	import JustifyIcon from '../Icons/JustifyIcon.svelte'
 	import Leading from './Leading.svelte'
@@ -12,8 +12,14 @@
 	import {STYLE} from './const'
 	import Spacing from './Spacing.svelte';
 	import FontSizeList from "./FontSizeList.svelte";
-	
+
 	export let tools = ['headings', 'font-sizes', 'bold', 'italic', 'underline', 'linethrough', 'code', 'link', 'text-color', 'bg-color', 'fill-color', 'justify', 'text-align', 'padding', 'margin', 'leading', 'clear'];
+	// custom function from outside the editor
+	export let setColorFn
+	export let setBgColorFn
+	export let opts = {}
+	// opts color, bgColor
+
 	export let setClass
 	export let setGClass
 	export let setFillClass
@@ -23,30 +29,32 @@
 	export let fill_class
 	export let href
 	export let blank
+	// show basic input for a single span, no gclass
+	export let basic = false
 	// export let setLink
 	export let base_node
 	let dispatch = createEventDispatcher()
 	export let mouseX
-	
+
 	function firstParentRelative(n){
 		// Make element absolute if you want to restore this
 		// while(n.parentNode && n.parentNode.tagName){
 		// 	n = n.parentNode
-		// 	if(window.getComputedStyle(n).getPropertyValue('position').toLowerCase() == 'relative'){
+		// 	if(window.__edw.getComputedStyle(n).getPropertyValue('position').toLowerCase() == 'relative'){
 		// 		return n.getBoundingClientRect()
 		// 	}
 		// }
-		// return {top: -window.scrollY, left: 0}
+		// return {top: -window.__edw.scrollY, left: 0}
 		return {top: 0, left: 0}
 	}
 
 	function setPosition(node){
-		let e = window.event;
+		let e = window.__edw.event;
 		if(!base_node) return
-		
+
 		let elm = base_node.parentNode.tagName == 'DIV' ? base_node : base_node.parentNode
 		let rect = elm.parentNode.getBoundingClientRect()
-		let posY = rect.top-10; 
+		let posY = rect.top-10;
 		if(elm.previousElementSibling){
 			let ch_nodes = [...elm.parentNode.childNodes]
 			let siblings = ch_nodes.slice(0,ch_nodes.indexOf(elm)+1)
@@ -63,9 +71,9 @@
 			pos_top = 30
 		node.style.top = `${pos_top}px`
 		mouseX = mouseX || 10
-		let mx = mouseX-node.offsetWidth/2 
+		let mx = mouseX-node.offsetWidth/2
 		mx = mx > 0 ? mx : 10
-		mx = mouseX+node.offsetWidth/2 < window.innerWidth ? mx : window.innerWidth-node.offsetWidth
+		mx = mouseX+node.offsetWidth/2 < window.__edw.innerWidth ? mx : window.__edw.innerWidth-node.offsetWidth
 		node.style.left = `${mx-rel_rect.left}px`
 	}
 
@@ -83,15 +91,17 @@
 		return reg.test(classes)
 	}
 
-	
+
 
 	let e_classes = {}
 
 	const reg_font = /font\-(thin|normal|semibold|bold|black)/
+	const reg_pad = /p\-([0-4])/
 
 	function initEClasses(){
 		e_classes = {
 			bold: cregexist(reg_font),
+			padding: cregexist(reg_pad),
 			italic: cexist(STYLE.ITALIC),
 			underline: cexist(STYLE.UNDERLINE),
 			linethrough: cexist(STYLE.LINETHROUGH),
@@ -114,7 +124,7 @@
 			n_classes.splice(n_classes.indexOf(klass),1)
 			classes = n_classes.join(' ')
 		}
-		
+
 		initEClasses()
 	}
 
@@ -140,29 +150,44 @@
 		}
 		initEClasses()
 	}
-	
-	
+
+	function togglePadding(){
+		const ps = ['0','1','2','3','4']
+		let included = false
+		for(let i=0; i< ps.length;i++){
+			if(classes.includes("p-"+ps[i])){
+				included = true
+				if(i+1<ps.length){
+					classes = classes.replace('p-'+ps[i],'p-'+ps[i+1]).trim()
+					setClass('p-'+ps[i+1])
+				}else{
+					classes = classes.replace('p-'+ps[i],'p-'+ps[0]).trim()
+					setClass('p-'+ps[0])
+				}
+				break;
+			}
+		}
+		if(!included){
+			classes = classes.split(' ').concat(['p-1']).join(' ').trim()
+			setClass('p-1')
+		}
+		initEClasses()
+	}
+
+
 	// duplicated in contenteditor (TO UPDATE!)
 	function replaceGClass(klass, reg, gklass){
 		let classes = gklass.split(' ')
 		let s_index = classes.findIndex(c => reg.test(c))
-		// console.log({classes})
-		// console.log({reg})
-		// console.log({s_index})
 		let selected_class = ~s_index ? classes[s_index] : ''
-		// console.log({selected_class})
 		if(selected_class){
 			gklass = gklass.replace(selected_class,'').trim()
-			// console.log({gklass})
 		}
 		gklass = gklass.split(' ').concat([klass]).join(' ')
-		// console.log({gklass})
-
-		
 		return gklass
 	}
 
-	// duplicated!! 
+	// duplicated!!
 	const reg_position = /^text\-(left|right|center)/
 	const reg_padding = /^p[lrtb]\-/
 	const reg_margin = /^m[lrtb]\-/
@@ -188,17 +213,17 @@
 			n_classes.splice(n_classes.indexOf(klass),1)
 			g_classes = n_classes.join(' ')
 		}
-		
+
 		initEClasses()
 	}
-	
+
 </script>
 
-<div use:setPosition on:mousedown|stopPropagation class="se-toolbar flex fixed font-normal -mt-6 shadow bg-white z-950 text-base rounded">
+<div use:setPosition on:mousedown|stopPropagation class="se-toolbar flex fixed font-normal -mt-6 shadow bg-white z-50 z-950 text-base rounded">
 	<div class="rounded flex items-center shadow-lg border border-gray-200  text-gray-700">
-		{#if tools.includes('headings')}
-			<div class="se-tool border-r" title="Headings">
-				<HeadingList setClass={setGClass} klass={g_classes} />	
+        {#if tools.includes('headings')}
+			<div class="se-tool border-r {basic ? 'hidden':''}">
+				<HeadingList setClass={setGClass} klass={g_classes} />
 			</div>
 		{/if}
 		{#if tools.includes('font-sizes')}
@@ -225,6 +250,11 @@
 			<div class="se-tool px-2 cursor-pointer select-none { e_classes.linethrough ? 'text-blue-600':''} line-through hover:bg-gray-200 py-1" on:mousedown={() => toggle(STYLE.LINETHROUGH)} title="Line Through">
 				S
 			</div>
+        {/if}
+        {#if tools.includes('padding')}
+			<div class="px-2 cursor-pointer select-none { e_classes.padding ? 'text-blue-600':''} font-medium hover:bg-gray-200 py-1" on:mousedown={togglePadding} title="Padding">
+				P
+			</div>
 		{/if}
 		{#if tools.includes('code')}
 			<div class="se-tool px-2 cursor-pointer select-none { e_classes.code ? 'text-blue-600':''} line-through hover:bg-gray-200 py-2" on:mousedown={() => toggle(STYLE.CODE)} title="Code style">
@@ -238,51 +268,50 @@
 		{/if}
 		{#if tools.includes('text-color')}
 			<div class="se-tool pl-1 cursor-pointer select-none hover:bg-gray-200 py-1 " title="Text color">
-				<ColorPicker {setClass} klass={classes} />
+				<ColorPicker hex={opts.color} {setColorFn} {setClass} klass={classes} />
 			</div>
 		{/if}
 		{#if tools.includes('bg-color')}
 			<div class="se-tool px-1 cursor-pointer select-none hover:bg-gray-200 h-full flex items-center" title="Highlight color">
-				<ColorPicker txt="bg" {setClass} klass={classes} />
+				<ColorPicker hex={opts.bgColor} txt="bg" {setBgColorFn} {setClass} klass={classes} />
 			</div>
-		{/if}
-		{#if tools.includes('fill-color')}
-			<div class="se-tool px-1 cursor-pointer select-none hover:bg-gray-200 h-full flex items-center" title="Fill Color">
-				<ColorPicker txt="bg" setClass={setFillClass} klass={fill_class} fill={true}/>
-			</div>
-		{/if}
-		{#if tools.includes('justify')}
-			<div class="se-tool px-2 { e_classes.justify ? 'text-blue-600':'text-gray-700'} cursor-pointer select-none hover:bg-gray-200 py-1 h-full flex items-center" on:mousedown={() => toggleG(STYLE.JUSTIFY)} title="Justify">
+        {/if}
+        {#if tools.includes('fill-color')}
+            <div class="se-tool px-1 cursor-pointer select-none hover:bg-gray-200 h-full flex items-center" title="Fill Color">
+                <ColorPicker txt="bg" setClass={setFillClass} klass={fill_class} fill={true}/>
+            </div>
+        {/if}
+        {#if tools.includes('justify')}
+			<div class="se-tool px-2 {basic ? 'hidden':''} { e_classes.justify ? 'text-blue-600':'text-gray-700'} cursor-pointer select-none hover:bg-gray-200 py-1 h-full flex items-center" on:mousedown={() => toggleG(STYLE.JUSTIFY)} title="Justify">
 				<JustifyIcon />
 			</div>
-		{/if}
-		{#if tools.includes('text-align')}
-			<div class="se-tool h-full" title="Text Align">
-				<TextAlign {e_classes} on:select={(evt) => toggleG(evt.detail)} />
-			</div>
-		{/if}
-		{#if tools.includes('padding')}
-			<div class="se-tool border-l h-full" title="Padding">
-				<Spacing mp="p" title="Padding" {g_classes} on:select={(evt) => toggleG(evt.detail)} />
-			</div>
-		{/if}
-		{#if tools.includes('margin')}
-			<div class="se-tool h-full" title="Margin">
-				<Spacing mp="m" title="Margin" {g_classes} on:select={(evt) => toggleG(evt.detail)} />
-			</div>
-		{/if}
-		{#if tools.includes('leading')}
-			<div class="se-tool cursor-pointer select-none hover:bg-gray-200 h-full flex items-center" title="Leading">
-				<Leading setClass={setGClass} klass={g_classes} />
-			</div>
-		{/if}
-		{#if tools.includes('clear')}
-			<div class="se-tool cursor-pointer select-none hover:bg-gray-200 h-full flex items-center border-l" title="Remove all formatting" >
-				<div class="px-2 cursor-pointer select-none hover:bg-gray-200 py-1" on:mousedown={clearAllFormatting}>
-					&times;
-				</div>
-			</div>
-		{/if}
+        {/if}
+        {#if tools.includes('text-align') && !basic}
+            <div class="se-tool h-full" title="Text Align">
+                <TextAlign {e_classes} on:select={(evt) => toggleG(evt.detail)} />
+            </div>
+        {/if}
+
+        <!-- <div class="border-l h-full">
+            <Spacing mp="p" title="Padding" {g_classes} on:select={(evt) => toggleG(evt.detail)} />
+        </div> -->
+        {#if tools.includes('margin')}
+            <div class="se-tool h-full {basic ? 'hidden':''}" title="Margin">
+                <Spacing mp="m" title="Margin" {g_classes} on:select={(evt) => toggleG(evt.detail)} />
+            </div>
+        {/if}
+        {#if tools.includes('leading')}
+            <div class="se-tool {basic ? 'hidden':''} cursor-pointer select-none hover:bg-gray-200 h-full flex items-center" title="Leading">
+                <Leading setClass={setGClass} klass={g_classes} />
+            </div>
+        {/if}
+        {#if tools.includes('clear')}
+            <div class="se-tool cursor-pointer select-none hover:bg-gray-200 h-full flex items-center border-l" title="Remove all formatting" >
+                <div class="px-2 cursor-pointer select-none hover:bg-gray-200 py-1" on:mousedown={clearAllFormatting}>
+                    &times;
+                </div>
+            </div>
+        {/if}
 
 	</div>
 </div>

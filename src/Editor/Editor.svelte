@@ -2,19 +2,27 @@
   import ContentEditor from "./ContentEditor.svelte";
   import ToolBar from "../ToolBar/ToolBar.svelte";
   import MediaInput from "../ToolBar/MediaInput.svelte";
+  import EditorHistory from "../lib/EditorHistory";
   import {createEventDispatcher} from 'svelte'
-  import "../global.css"
+  // import "../global.css"
   const dispatch = createEventDispatcher()
 
   export let editable = false
   export let tools;
   export let html = "";
   export let uid = null;
+  export let basic = false
+  export let setBgColorFn
+  export let setColorFn
+  export let opts = {}
+  export let settings={}
 
   let arr_html, fill_class, inner_html;
 
   $: ({fill_class, inner_html} = extractFillClass(html));
   $: arr_html = [{html: inner_html, klass: ''}]
+
+  EditorHistory.add([{html: extractFillClass(html).inner_html, klass: ''}])
 
   async function addNewElm(i, evt) {
     // split
@@ -22,25 +30,47 @@
     let target = evt.detail.target
     let pchildren = [...target.parentNode.children]
     let index = pchildren.indexOf(target)
+    let klass1 = evt.detail.klass?.trim(), klass2 = evt.detail.klass?.trim()
+    if(!evt.detail.html) {
+      klass1 = ''
+    }
+    if(!evt.detail.next_html) {
+      klass2 = ''
+    }
+    const arr_elms = [
+      { html: evt.detail.html, klass: klass1, custom: arr_html[i].custom },
+      { html: evt.detail.next_html, klass: klass2 } //evt.detail.klass
+    ]
+    if(evt.detail.next2_html){
+      arr_elms.push(
+        { html: evt.detail.next2_html, klass: klass2 } //evt.detail.klass
+      )
+    }
     arr_html.splice(
       i,
       1,
-      { html: evt.detail.html, klass: evt.detail.klass, custom: arr_html[i].custom },
-      { html: evt.detail.next_html, klass: '' } //evt.detail.klass
+      ...arr_elms
     );
     // auto focus
     arr_html = arr_html;
 	  await new Promise(r => setTimeout(r));
-	  
+
 	  let div_editors = [...target.parentNode.children] //GET children again after timeout refresh!
     // next element
-   
+
     let j= 1;
     while(div_editors[index + j] && !div_editors[index + j].getAttribute('contenteditable')){
       j++
     }
     div_editors[index + j]?.focus();
+    historyChange()
+  }
 
+  function historyChange(){
+    setTimeout(() => {
+      EditorHistory.add(arr_html)
+    });
+    disaptchChange()
   }
 
   let list_editors;
@@ -112,26 +142,41 @@
 
   function mergePrev(evt, i) {
     if (i > 0 && !arr_html[i-1].custom) {
-      arr_html[i - 1].html += evt.detail;
+      // if empty take the class of current element!
+      let item0 = arr_html[i - 1]
+      let item1 = arr_html[i]
+      if(!item0.html) {
+        arr_html[i - 1] = {...item1}
+      } else {
+        item0.html += evt.detail;
+      }
       arr_html.splice(i, 1);
       arr_html[i - 1].custom = false
       arr_html = arr_html;
     }
+    historyChange()
   }
-  
+
   function mergeNext(evt, i) {
     if (i+1 < arr_html.length && !arr_html[i+1].custom) {
-      arr_html[i].html += arr_html[i+1].html;
+      let item0 = arr_html[i]
+      let item1 = arr_html[i+1]
+      if(!item0.html) {
+        arr_html[i] = {...item1}
+      } else {
+        item0.html += item1.html;
+      }
       arr_html.splice(i+1, 1);
       arr_html[i].custom = false
       arr_html = arr_html;
     }
+    historyChange()
   }
 
-  
 
-  let setMedia 
-  let delMedia 
+
+  let setMedia
+  let delMedia
   let show_media = false
   let img_props = {}
   function setMediaInfo(evt){
@@ -147,13 +192,14 @@
 	  }
     mouseX = evt.detail.mouseX
 	  // show toolbar setmedia
-    setMedia(img_props)	
+    setMedia(img_props)
 	  show_media = true
   }
 
-  function addMedia(img){
+  function addMedia(img, update=false){
     setMedia(img)
-	  show_media = false
+    if(!update)
+	    show_media = false
     disaptchChange()
   }
 
@@ -171,11 +217,12 @@
     if(target.dataset.editor){
       return target
     }
-      
+
     return false
   }
 
   function triggerChange(e){
+    show_media = false
     // trigger change if click is not on the current editor
     let pEditor = getParentEditor(e.target)
     if(!pEditor || pEditor.dataset.uid !== uid){
@@ -186,15 +233,29 @@
 
   let updated = false
 
-  function contentUpdated(){
+  function contentUpdated(evt){
+    if(evt?.detail?.currentTarget) {
+      if(!evt.detail.currentTarget.innerText){
+        // add history for first character
+        EditorHistory.add(arr_html)
+      }else{
+        // update current history
+        EditorHistory.update(arr_html)
+      }
+    }
     updated = true
   }
-  
+
   function triggerUpdate(){
     if(updated && !show_toolbar){
         disaptchChange()
+        EditorHistory.add(arr_html)
         updated = false
     }
+  }
+
+  function triggerUpdateClass(){
+    historyChange()
   }
 
   function disaptchChange(){
@@ -208,16 +269,36 @@
     });
   }
 
-  const SIMPLE_ELMS = ['SPAN','EM','STRONG','SMALL','h1','h2','h3','h4','h5','h6'] // [TODO] finish this list! 
+  function prevHistory(){
+    arr_html = EditorHistory.prev()
+  }
+
+  function nextHistory(){
+    arr_html = EditorHistory.next()
+  }
+
+  const SIMPLE_ELMS =  ['SPAN','EM','STRONG','SMALL','H1','H2','H3','H4','H5','H6','P','LI'] // [TODO] finish this list!
 
   async function pasteTxt(i, evt){
+
     await new Promise(r => setTimeout(r))
-    let chs = evt.detail.children
+
+    let chs = evt.detail?.children
     if(chs){
       let arr_h = []
       for(let ch of [...chs] ){
-        if(ch.dataset.txteditor){
-          arr_h.push({html: ch.innerHTML, klass: ch.getAttribute('class')})
+        if(ch.dataset?.uid?.startsWith("0x")){
+          ch = ch.children[0]
+          for(let child of [...ch.children]){
+            arr_h.push({html: child.innerHTML, klass: child?.getAttribute('class')||''})
+          }
+        }else if(ch.dataset.txteditor){
+            arr_h.push({html: ch.innerHTML, klass: ch.getAttribute('class')})
+        }else{
+
+            if(!ch.children.length){
+              arr_h.push({html: ch.innerText, klass: ""})
+            }
         }
       }
       if(arr_h.length){
@@ -229,25 +310,28 @@
 
       }else{
         // wrap into a div or do nothing!
-        if(chs.length && !SIMPLE_ELMS.includes(chs[0].tagName)){
+        if(chs.length ){
           arr_html[i].custom = true
         }
 
         if(SIMPLE_ELMS.includes(chs?.[0]?.tagName)){
-          arr_html[i].html = chs[0].innerText
+          // wrap it in a div
+          arr_html[i].html = `<div>${chs[0].innerHTML}</div>`
         }
-        
+
         arr_html = arr_html
+
       }
+      historyChange()
     }
   }
 
+  window.__edw.addEventListener('mousedown', triggerChange)
 </script>
-
-<svelte:window  on:mousedown={triggerChange} />
 
 {#if show_toolbar && editable}
   <ToolBar
+    {basic}
     {tools}
     {setGClass}
     {setClass}
@@ -260,6 +344,9 @@
     {href}
     {blank}
     {mouseX}
+    {setColorFn}
+    {setBgColorFn}
+    {opts}
     on:close={hideSelect} />
 {/if}
 
@@ -270,6 +357,9 @@
 <div use:setListEditors key="ed" class={fill_class}>
   {#each arr_html as h, i}
     <ContentEditor
+      {settings}
+      on:back={prevHistory}
+      on:forward={nextHistory}
       editable={editable}
       custom={!!h.custom}
       bind:html={h.html}
@@ -281,7 +371,7 @@
       on:hideselect={hideSelect}
 	    on:set_media={setMediaInfo}
       on:input={contentUpdated}
-      on:changeClass={disaptchChange}
+      on:changeClass={triggerUpdateClass}
       on:blur={triggerUpdate}
       on:update={triggerUpdate}
       on:pasteTxt={evt => pasteTxt(i,evt)}

@@ -17,24 +17,25 @@
   }
 
   function addLink() {
-    setLink(`underline text-blue-500 link`, href, {blank});
+    setLink(`link`, href, {blank});
     hideLink();
   }
 
   function rmLink() {
-    setLink("underline text-blue-500 link", null);
+    setLink("link", null);
     hideLink();
   }
+  
+	window.__edw.addEventListener('click', hideLink)
 </script>
 
-<svelte:window on:click={hideLink} />
 <div class="relative" on:mousedown>
   <span class="px-2 py-1" on:click={toggleLink}>
     <span class="border-b border-gray-400">Link</span>
   </span>
   {#if show_link}
     <div
-      class="absolute p-3 shadow-xl flex rounded bg-white -ml-24 mt-1 z-920"
+      class="absolute p-3 shadow-xl flex rounded bg-white -ml-24 mt-1 z-920 z-20"
       on:click={stop}>
       <input
         on:click={stop}
@@ -56,7 +57,7 @@
       </button>
       <label class="flex items-center text-black text-xs" on:click|stopPropagation>
         <input type="checkbox" bind:checked={blank} class="mr-2" />
-        _Blank
+        NewTab
       </label>
     </div>
   {/if}

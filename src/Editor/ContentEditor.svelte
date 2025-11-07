@@ -5,19 +5,20 @@
 	let dispatch = createEventDispatcher()
 
 	let arr_elms = []
-	
+
 	export let html = ''
 	export let gklass = ''
 	export let editable = true
 	export let custom = false
+	export let settings = {}
 
-	async function generateArr(){
+	function getArrFromHtml(html) {
 		let div = document.createElement('div')
 		div.innerHTML = html
 		let n_elms = []
 		for(let elm of [...div.childNodes]){
 			const itrue = (attr) => elm.hasAttribute(attr)
-			
+
 			if(elm.nodeName == 'BR')
 				n_elms.push({tag: 'BR',txt: ""})
 			else if(elm.nodeName == 'A')
@@ -32,16 +33,26 @@
 				n_elms.push({tag: 'IFRAME', href: elm.lastChild.getAttribute('src'), klass: elm.lastChild.classList&&[...elm.lastChild.classList].join(' ')})
 			else if(elm.nodeName == 'SPAN')
 				n_elms.push({txt: elm.innerText, klass: elm.classList&&[...elm.classList].join(' ')})
+			else if(elm.nodeName == 'LI'){
+				n_elms.push({
+					tag: "LI",
+					txt: elm.innerText,
+					klass: elm.classList&&[...elm.classList].join(' '),
+					elms: elm.innerHTML ? getArrFromHtml(elm.innerHTML) : null
+				})
+			}
 			else if(elm.nodeName !== '#text')
 				n_elms.push({htxt: `${elm.outerHTML}`, klass: elm.classList&&[...elm.classList].join(' ')})
 			else if(elm.nodeName == '#text' && elm.length>0 )
 				n_elms.push({txt: elm.textContent})
-			
+
 		}
+		return n_elms
+	}
 
+	async function generateArr(content){
 
-		
-		arr_elms = n_elms
+		arr_elms = getArrFromHtml(html)
 		await tick()
 		refreshEvents()
 	}
@@ -51,7 +62,7 @@
 	$: if(mounted){
 		if(html)
 			generateArr()
-		else 
+		else
 			arr_elms = []
 	}
 
@@ -62,23 +73,51 @@
 	onMount(() => {
 		mounted = true
 		generateArr()
+		document.onselectionchange = function() {
+			window.__edw.cursor_change = +new Date
+		}
 	})
-	
+
+
+	// let last_position
+
+	function cursorIsSame() {
+		let l_cursor_change = +new Date
+		return l_cursor_change - window.__edw.cursor_change > 50
+	}
+
+
 	const char_keys = ['B'.charCodeAt(0),'U'.charCodeAt(0),'I'.charCodeAt(0)]
 	async function handleKeydown(e){
-		
+		let target = e.currentTarget
 		if(e.ctrlKey && char_keys.includes(e.keyCode)){
 			e.preventDefault()
 			return
 		}
-		let selection = window.getSelection()
+
+		if(e.ctrlKey && e.keyCode == 'Z'.charCodeAt(0)){
+			dispatch('back')
+			return
+		}
+
+		if(e.ctrlKey && e.keyCode == 'Y'.charCodeAt(0)){
+			dispatch('forward')
+			return
+		}
+
+		let selection = window.__edw.getSelection()
+		let selection_txt = selection.toString()
 		let b_node = selection.anchorNode
 		let e_node = selection.focusNode
-		let start_i = selection.anchorOffset
-		let end_i = selection.focusOffset
+		let start_i = selection.baseOffset??selection.anchorOffset
+		let end_i = selection.extentOffset??selection.focusOffset
 		if(!b_node) return
 		let elm_node = (b_node?.tagName=='DIV') ? b_node : b_node.parentNode.tagName == 'DIV' ? b_node.parentNode : b_node.parentNode.parentNode
-		
+		let ed_elm = elm_node
+		while(!ed_elm?.dataset?.txteditor && ed_elm?.tagName!='HTML'){
+			ed_elm = ed_elm?.parentNode
+		}
+
 		let b_index = getIndex(b_node)
 		let e_index = getIndex(e_node)
 
@@ -86,7 +125,7 @@
 			let children = [...n.childNodes]
 			let last_child = children[children.length-1]
 			if(!last_child) return
-			last_child = ['#text','BR','IMG','VIDEO'].includes(last_child.nodeName)||last_child?.dataset?.iframe ? last_child : last_child.childNodes[0] 
+			last_child = ['#text','BR','IMG','VIDEO'].includes(last_child.nodeName)||last_child?.dataset?.iframe ? last_child : last_child.childNodes[0]
 			if(!last_child) return false
 			let pos = d == "up" ? last_child.textContent.length : 0
 			try{
@@ -98,11 +137,12 @@
 
 
 		// up key
-		if(e.keyCode == 38){ 
+		if(e.keyCode == 38){
 			if (b_node == e_node && start_i == 0 && (b_index <= 0)){
 				// move to the previous node
-				let pv_elm = elm_node.previousElementSibling
-				// TODO - fix workaround
+
+				let pv_elm = ed_elm.previousElementSibling
+
 				while (pv_elm && pv_elm.previousElementSibling && !pv_elm.isContentEditable) {
 					pv_elm = pv_elm.previousElementSibling
 				}
@@ -114,17 +154,21 @@
 					return false
 				}
 			}
-			
+
 		}
 		// down key
-		if(e.keyCode == 40){ 
+		if(e.keyCode == 40){
 			// get index
 			if (b_node == e_node){
-				// if(b_index == arr_elms.length-1 || (b_index == arr_elms.length-2 && arr_elms[arr_elms.length-1].tag == 'BR') || b_node == elm_node){
-				if(b_index == arr_elms.length-1 || ((b_index == -1 || start_i == arr_elms.length-1) && arr_elms[arr_elms.length-1].tag == 'BR')){
 
-					let next_elm = elm_node.nextElementSibling
-					
+				await new Promise(r => setTimeout(r))
+				// if(b_index == arr_elms.length-1 || (b_index == arr_elms.length-2 && arr_elms[arr_elms.length-1].tag == 'BR') || b_node == elm_node){
+				if((cursorIsSame() && ed_elm.dataset.txtcustom == "true")
+					|| (ed_elm.dataset.txtcustom !== "true" && b_index >= arr_elms.length-1)
+					|| ((b_index == -1 || start_i == arr_elms.length-1) && arr_elms[arr_elms.length-1].tag == 'BR')){
+
+					let next_elm = ed_elm.nextElementSibling
+
 					while (next_elm && next_elm.nextElementSibling && !next_elm.isContentEditable) {
 						next_elm = next_elm.nextElementSibling
 					}
@@ -149,8 +193,8 @@
 			}
 			let elms = arr_elms.length && arr_elms[arr_elms.length-1].tag == 'BR' ? arr_elms.slice(0,arr_elms.length-1) : arr_elms
 			if((!~b_index && !elms.length) || (b_node.tagName == 'DIV' && b_index==0 && start_i == elms.length) || (b_index == elms.length-1 && start_i == elms[elms.length-1].txt?.length && !selection.toString())){
-				let l_node_index 
-				let l_node_end 
+				let l_node_index
+				let l_node_end
 				let pv_elm = elm_node
 				if(pv_elm && pv_elm.isContentEditable){
 					if(!pv_elm.childNodes.length)
@@ -158,9 +202,9 @@
 					else{
 						l_node_index = pv_elm.childNodes.length-1
 						l_node_end = pv_elm.childNodes[pv_elm.childNodes.length-1].textContent.length
-					} 
-				}	
-				
+					}
+				}
+
 				dispatch('merge_next')
 				e.preventDefault()
 
@@ -178,20 +222,27 @@
 
 		// back key
 		if(e.keyCode == 8){
+
 			if(customTxtEditor(b_node)) {
 				if(b_node?.dataset?.txteditor && !b_node?.innerHTML){
 					dispatch('merge_prev', '')
 				}
 				return
 			}
-			if(start_i==0 && (b_index==0 || b_index == -1) && !selection.toString()){
-				let l_node_index 
-				let l_node_end 
+            let li_elm = b_node.tagName === "LI" ? b_node :
+                b_node.parentNode?.tagName === "LI" ? b_node.parentNode : null
+            if(li_elm) return
+            if(selection_txt) return
+
+            // start_i == 0
+			if(!start_i && (b_index==0 || b_index == -1)){
+				let l_node_index
+				let l_node_end
 				let pv_elm = elm_node.previousElementSibling
 				// STEP to skip grammarly (woraround for now!) -- TODO - fix
 				if(pv_elm && !pv_elm.isContentEditable)
 					pv_elm = pv_elm.previousElementSibling
-				
+
 				if(pv_elm && pv_elm.isContentEditable){
 					if(!pv_elm.childNodes.length){
 						pv_elm.focus()
@@ -199,8 +250,8 @@
 					else{
 						l_node_index = pv_elm.childNodes.length-1
 						l_node_end = pv_elm.childNodes[pv_elm.childNodes.length-1].textContent.length
-					} 
-				}	
+					}
+				}
 				e.preventDefault()
 				dispatch('merge_prev', html)
 				await (new Promise(r => setTimeout(r)))
@@ -217,41 +268,92 @@
 				}
 			}
 		}
-		
+
 		// enter key
 		if(e.keyCode == 13 && e.shiftKey == false){
 			let elm_html = ''
 			let next_html = ''
+			let next2_html = ''
 			let elm_index = b_index==-1 ? arr_elms.length-1 : b_index+(b_node.tagName == 'DIV' && start_i>0 ?  start_i-1 : 0)
-
 			if(customTxtEditor(b_node)) {
-				dispatch('enter',{html: html.trim(), next_html: "", klass: gklass, target: e.currentTarget})
+				e.preventDefault()
+				dispatch('enter',{html: html.trim(), next_html: "<li>&nbsp;</li>", klass: gklass, target: e.currentTarget})
+				return
+			}
+
+			let li_elm = b_node.tagName === "LI" ? b_node :
+				b_node.parentNode?.tagName === "LI" ? b_node.parentNode : null
+
+			if(target.querySelectorAll('li').length && li_elm?.innerText?.trim() !== "") {
+				// if the keydown is not on an empty li
+				// if(b_node.innerText !== "")
+				e.preventDefault()
+
+				// need to know current list anchor!
+				const index_li = li_elm?.parentNode ? [...li_elm.parentNode.children].indexOf(li_elm) : -1
+
+				let nli = document.createElement("li")
+				nli.innerHTML = "&nbsp;"
+				if(li_elm?.parentNode?.children && index_li < li_elm?.parentNode?.children.length-1) {
+					li_elm.parentNode.insertBefore(nli,li_elm.parentNode.children[index_li+1])
+				} else {
+					li_elm?.parentNode?.appendChild(nli)
+				}
+
+				// html += "<li>&nbsp;</li>"
+				html = li_elm.parentNode.innerHTML
+
+				setTimeout(() => {
+					const elm = target.querySelectorAll('li')[index_li+1]
+					selection.setBaseAndExtent(elm, 0, elm, 0);
+				})
+
 				return
 			}
 
 			if(arr_elms.length>0 && ~b_index){
-				
+				if(li_elm) {
+					elm_index = li_elm?.parentNode ? [...li_elm.parentNode.children].indexOf(li_elm) : 0
+				}
+
 				let n_arr = splitArr(arr_elms,elm_index,start_i)
 				arr_elms.splice(elm_index,1,...n_arr)
-				
+
 				let s_index = elm_index+(start_i==0 ? 0 :1)
+				const hasImg = arr_elms.find(elm => elm.tag === "IMG")
+				s_index = hasImg ? s_index+1 : s_index
 				elm_html = extractHTML(arr_elms.slice(0, s_index))
 				next_html = extractHTML(arr_elms.slice(s_index, arr_elms.length))
+
+				// console.log({elm_html, next_html})
 			}
 			if(!~b_index){
 				elm_html = extractHTML(arr_elms)
 			}
-			dispatch('enter',{html: elm_html.trim(), next_html: next_html.trim(), klass: gklass, target: e.currentTarget})
+
+			// if li is empty create a div
+			if (li_elm?.innerText?.trim() === "") {
+				const index_li = li_elm?.parentNode ? [...li_elm.parentNode.children].indexOf(li_elm) : -1
+				// replace last li with div, or remove it
+				// dispatch 2 if no last li (next_html empty)
+				// dispatch 3 if there are other li (next_html empty) (next2_html other li)
+				if(index_li < li_elm.parentNode.children.length-1){
+					next2_html = next_html.trim().replace(/^<li[^>]*>[^<]*<\/li>/i, '');
+				}
+				next_html = ""
+			}
+
+			dispatch('enter',{html: elm_html.trim(), next_html: next_html.trim(), next2_html, klass: gklass, target: e.currentTarget})
 			e.preventDefault()
 			return false
 		}
 
 		if(e.keyCode == 13 && e.shiftKey == true){
-			
+
 			let div_elm = b_node.nodeName != '#text' ? b_node.parentNode : b_node.parentNode.parentNode
 			await (new Promise(r => setTimeout(r)))
-			
-			if(customTxtEditor(div_elm)) {
+			// console.log("target:",target)
+			if(customTxtEditor(div_elm) || div_elm.querySelectorAll('li').length) {
 				return
 			}
 			// not in rooot
@@ -268,7 +370,7 @@
 				// parent child text nodes
 				let children = [...parent.childNodes]
 				let elms = []
-				
+
 				for (let ch of children){
 					if(ch && ch.textContent){
 						elms.push({txt: ch.textContent, klass: arr_elms[b_index]?.klass||"", tag: parent.tagName})
@@ -280,12 +382,25 @@
 				arr_elms.splice(b_index, 1,...elms)
 				refresh()
 				await (new Promise(r => setTimeout(r)))
-				
+
 				let p_elm = div_elm.childNodes[elms[0].tag == 'BR' ? b_index: b_index+2]
 				selection.setBaseAndExtent(p_elm, 0, p_elm, 0);
 			}
 
 
+			// if string starts with "-" transform into <li> tag
+			if(!selection_txt) {
+			}
+
+
+		}
+		if(!e.ctrlKey && !e.shiftKey && !e.altKey) {
+			if(!target) return
+			// console.log(target.innerText)
+			if(target.innerHTML === '-') {
+				target.innerHTML = "<li></li>"
+			}
+			dispatch('input', e)
 		}
 
 	}
@@ -300,6 +415,19 @@
 		return false
 	}
 
+	function getStyle(klass) {
+		let txt_color = klass.replace(/.*text-\[([^\]]*)\].*/i,"$1")
+		let bg_color = klass.replace(/.*bg-\[([^\]]*)\].*/i,"$1")
+		let s = ""
+		if(txt_color?.startsWith("#")) {
+			s += `color:${txt_color};`
+		}
+		if(bg_color?.startsWith("#")) {
+			s += `background:${bg_color};`
+		}
+		return s
+	}
+
 	function extractHTML(arr){
 		let str = ''
 		arr.forEach(elm => {
@@ -311,10 +439,17 @@
 				str += elm.htxt
 			}else if(elm.tag == 'BR'){
 				str += '<br>'
+			}else if(elm.tag == 'LI'){
+				// see if there are elms first, prioritize
+				let s = ""
+				if(elm.elms?.length) {
+					s += extractHTML(elm.elms)
+				}
+				str += `<li class="${elm.klass}">${s || elm_txt}</li>`
 			}else if(elm.tag == 'A'){
-				str += `<a href=${elm.href} target=${elm.blank ? '_blank':'_self'} class="${elm.klass}">${elm_txt}</a>`
+				str += `<a href=${elm.href} target=${elm.blank ? '_blank':'_self'} class="${elm.klass}" style="${getStyle(elm.klass)}">${elm_txt}</a>`
 			}else if(elm.tag == 'IMG'){
-				str += `<img src=${elm.href} class="${elm.klass}" alt=${elm_txt} />`
+				str += `<img src=${elm.href} class="${elm.klass}" alt="${elm_txt}" />`
 			}else if(elm.tag == 'VIDEO'){
 				str += `<video src=${elm.href} class="${elm.klass}" ${!!elm.opts?.loop ? 'loop':''} ${!!elm.opts?.autoplay ? 'autoplay':''} ${!!elm.opts?.muted ? 'muted':''} ${!!elm.opts?.controls ? 'controls':''} />`
 			}else if(elm.tag == 'IFRAME'){
@@ -327,17 +462,20 @@
 				str += `<div class="iframe-wrap" data-iframe="true" contenteditable="false">
 					${ed_str}
 					<iframe src=${elm.href} class="${elm.klass}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen />
-				</div>`	
+				</div>`
 			}else if(elm.klass){
-				str += `<span class="${elm.klass}">${elm_txt}</span>`
+				str += `<span class="${elm.klass}" style="${getStyle(elm.klass)}">${elm_txt}</span>`
 			}else{
 				str += elm_txt
 			}
 		})
-		return str
+		// for list
+		const regex = /<li\s*(?:class="[^"]*"\s*)*>(?:\s|&nbsp;)*<\/li>\s*$/;
+		const result = str.replace(regex, '');
+		return result
 	}
 
-	function refresh(){	
+	function refresh(){
 		html = extractHTML(arr_elms)
 	}
 
@@ -361,34 +499,92 @@
 	async function holdSelection(selection){
 		if(h_selection) return
 		h_selection = {
-			start_i: selection.anchorOffset ,
-			end_i: selection.focusOffset ,
-			
+			start_i: selection.baseOffset??selection.anchorOffset ,
+			end_i: selection.extentOffset??selection.focusOffset ,
+
 			b_node: selection.anchorNode,
 			e_node: selection.focusNode
 		}
 	}
-	
-	 
+
+	async function handleClassToggle(arr_obj, edit_node, edit_index=-1, class_name, link, opts={}, params) {
+		let n_arr  = arr_obj.slice(params.sb_index,params.se_index+1)
+
+		let arr1 = splitArr(n_arr,0,params.start_i, params.same_node && params.end_i)
+
+		let up_arr = arr1.length == 1 ? arr1 : arr1.length == 2&&(params.start_i==0||params.end_i==0) ? [arr1[0]] : [arr1[1]]
+
+		n_arr.splice(0,1,...arr1)
+
+		// arr_elms[params.li_index].elms = n_arr
+
+		up_arr.forEach(e => e.selected= true)
+
+		let arr2 = []
+		if(!params.same_node){
+			arr2 = splitArr(n_arr,n_arr.length-1, params.end_i, false)
+			n_arr.splice(n_arr.length-1,1,...arr2)
+			up_arr = up_arr.concat(n_arr.slice(1,n_arr.length-(arr2.length == 1 ? 0:1)))
+		}
+
+
+		// arr_elms.splice(sb_index,se_index-sb_index+1,...n_arr)
+		toggleClass(up_arr, class_name,link, opts)
+		up_arr.forEach(e => e.selected= true)
+		arr_obj.splice(params.sb_index,params.se_index-params.sb_index+1,...n_arr)
+
+		let p_selector = {}
+		if(params.li_index !== undefined) {
+			arr_elms[params.li_index].elms = mergeArr(arr_obj, p_selector)
+		} else {
+			arr_elms = mergeArr(arr_obj, p_selector)
+		}
+		// console.log({li_arr, arr_obj})
+
+		refresh()
+
+		h_selection = null
+
+		await tick()
+
+		let origin_node = edit_index === -1 ? edit_node : edit_node.children[edit_index]
+		let ch_nodes = [...origin_node.childNodes].filter(elm => elm.nodeName !== '#text' || (elm.nodeName == '#text' && elm.length>0))
+
+		let start_node = ch_nodes[p_selector.a_start]
+		let end_node = ch_nodes[p_selector.a_end]
+		if(!start_node) return
+		start_node = start_node.nodeName == '#text' ? start_node : start_node.firstChild
+		end_node = end_node.nodeName == '#text' ? end_node : end_node.firstChild
+
+		await (new Promise(r => setTimeout(r)))
+
+		window.__edw.getSelection().removeAllRanges();
+		window.__edw.getSelection().setBaseAndExtent(start_node, p_selector.s_start, end_node, p_selector.s_end);
+
+		holdSelection(window.__edw.getSelection())
+
+	}
+
+
 	async function setClass(class_name,link,opts={}){
-		
+
 		arr_elms.forEach(e => delete e.selected)
-		let selection = window.getSelection() 
+		let selection = window.__edw.getSelection()
 		let selection_txt = selection.toString()
 
-		let	start_i = h_selection ? h_selection.start_i : selection.anchorOffset
-		let end_i = h_selection ? h_selection.end_i : selection.focusOffset
-		
+		let	start_i = h_selection ? h_selection.start_i : (selection.baseOffset??selection.anchorOffset)
+		let end_i = h_selection ? h_selection.end_i : (selection.extentOffset??selection.focusOffset)
+
 		let b_node = h_selection ? h_selection.b_node : selection.anchorNode
 		let e_node = h_selection ? h_selection.e_node : selection.focusNode
-		
+
 		let b_index = getIndex(b_node)
 		let e_index = getIndex(e_node)
-		
-		let same_node = b_node == e_node 
-		 
+
+		let same_node = b_node == e_node
+
 		let reverse = b_index > e_index
-		
+
 		let sb_index = b_index
 		let se_index = e_index
 		if(reverse){
@@ -398,63 +594,59 @@
 			start_i = end_i
 			end_i = x
 		}
-		
-		let edit_node = b_node.parentNode
+
+		let edit_node = b_node?.parentNode ?? b_node
+
+		if(!edit_node) return
+		// if li, handle changes differently
+		// create an array of subelements
+
+		const params = {
+				start_i,
+				end_i,
+				b_node,
+				e_node,
+				sb_index,
+				se_index,
+				same_node,
+			}
+
+		if(edit_node?.tagName === 'LI' || edit_node?.parentNode?.tagName === 'LI') {
+			//arr_elms[b_index].tag = ""
+			//arr_elms = [arr_elms[b_index]]
+			// await (new Promise(r => setTimeout(r)))
+			let li_index = [...edit_node.parentNode.children].indexOf(edit_node)
+			if(edit_node?.parentNode?.tagName === 'LI') {
+				li_index = [...edit_node.parentNode.parentNode.children].indexOf(edit_node.parentNode)
+				edit_node = edit_node.parentNode
+			}
+
+			params.li_index = li_index
+			let origin_div = edit_node.parentNode
+			let edit_index = [...edit_node.parentNode.children].indexOf(edit_node)
+			let liobj = arr_elms[li_index] // first element
+			// create subarray that will be used for handling elements
+			let arr_obj = liobj.elms || [{
+				txt: liobj.txt,
+				tag: "SPAN"
+			}]
+			handleClassToggle(arr_obj,origin_div, edit_index, class_name,link,opts,params)
+			return
+		}
+
 		if(b_node.parentNode.tagName !== 'DIV'){
 			edit_node = edit_node.parentNode
 		}
-		
-		let n_arr  = arr_elms.slice(sb_index,se_index+1)
-			
-		let arr1 = splitArr(n_arr,0,start_i, same_node && end_i)
-		 
-		let up_arr = arr1.length == 1 ? arr1 : arr1.length == 2&&(start_i==0||end_i==0) ? [arr1[0]] : [arr1[1]] 
-		
-		n_arr.splice(0,1,...arr1)
-		let arr2 = []
-		if(!same_node){
-			arr2 = splitArr(n_arr,n_arr.length-1, end_i, false) 
-			n_arr.splice(n_arr.length-1,1,...arr2)
-			up_arr = up_arr.concat(n_arr.slice(1,n_arr.length-(arr2.length == 1 ? 0:1)))  
-		}
+		handleClassToggle(arr_elms, edit_node,-1,class_name,link,opts,params)
 
-		toggleClass(up_arr, class_name,link, opts)
-		up_arr.forEach(e => e.selected= true)
-		
-		arr_elms.splice(sb_index,se_index-sb_index+1,...n_arr)
+	}
 
-		let p_selector = {}
-		mergeArr(p_selector)
-		
-		refresh()
-
-		h_selection = null 
-
-		await tick()
-
-		let ch_nodes = [...edit_node.childNodes].filter(elm => elm.nodeName !== '#text' || (elm.nodeName == '#text' && elm.length>0))
-		
-		let start_node = ch_nodes[p_selector.a_start]
-		let end_node = ch_nodes[p_selector.a_end]
-		start_node = start_node.nodeName == '#text' ? start_node : start_node.firstChild
-		end_node = end_node.nodeName == '#text' ? end_node : end_node.firstChild
-
-		await (new Promise(r => setTimeout(r)))
-		
-		window.getSelection().removeAllRanges();
-		window.getSelection().setBaseAndExtent(start_node, p_selector.s_start, end_node, p_selector.s_end);
-		
-		holdSelection(window.getSelection())
-
-		
-	} 
-	
 
 	async function setGClass(klass){
-		
+
 		if(klass){
 			if(reg_txt_size.test(klass)){
-				
+
 				gklass = gklass.replace(code_class,'').replace(quote_class,'').trim()
 				replaceGClass(klass, reg_txt_size)
 
@@ -464,7 +656,7 @@
 					gklass = gklass.replace(quote_class,'').replace(g_reg_txt_size,'').trim()
 					gklass +=  ' '+code_class
 				}
-			
+
 			}else if( klass.startsWith('quote')){
 
 				if(!gklass.includes(quote_class)){
@@ -484,62 +676,62 @@
 				replaceGClass(klass, reg_leading)
 			}else {
 				toggleGClass(klass)
-			} 
-			 
+			}
+
 		}else{
 			elm.klass = klass
 		}
 		dispatch('changeClass')
 	}
-	
-	function mergeArr(p_selector){
+
+	function mergeArr(arr_elms,p_selector={}){
 		let n_arr = [{...arr_elms[0]}]
-		
+
 		if(arr_elms[0].selected){
 			p_selector.s_start = 0
 			p_selector.a_start = 0
 			p_selector.s_end = arr_elms[0].txt.length
 			p_selector.a_end = 0
 		}
-		
+
 		for(let i=1; i<arr_elms.length;i++){
 
 				if(arr_elms[i].txt && arr_elms[i].tag == arr_elms[i-1].tag && arr_elms[i].klass == arr_elms[i-1].klass){
-					
+
 					if(arr_elms[i].selected && !arr_elms[i-1].selected){
 						p_selector.s_start = n_arr[n_arr.length-1].txt.length
 						p_selector.a_start = n_arr.length-1
 						p_selector.s_end = n_arr[n_arr.length-1].txt.length+arr_elms[i].txt.length
 						p_selector.a_end = n_arr.length-1
 					}
-				  
-					n_arr[n_arr.length-1].txt += arr_elms[i].txt 
-					
+
+					n_arr[n_arr.length-1].txt += arr_elms[i].txt
+
 
 				}else{
 					if(arr_elms[i].txt){
 						n_arr.push({...arr_elms[i]})
-						
+
 						if(arr_elms[i].selected && !arr_elms[i-1].selected){
 							p_selector.s_start = 0
 							p_selector.a_start = n_arr.length-1
 							p_selector.s_end = n_arr[n_arr.length-1].txt.length
 							p_selector.a_end = n_arr.length-1
 						}
-						
+
 					}else if(arr_elms[i].tag == 'BR'){
 						n_arr.push({...arr_elms[i]})
 					}
 				}
-				
+
 				if(arr_elms[i].selected && arr_elms[i-1].selected){
 					p_selector.s_end = n_arr[n_arr.length-1].txt.length
 					p_selector.a_end = n_arr.length-1
 				}
-			
+
 		}
-		
-		arr_elms = n_arr
+
+		return n_arr
 	}
 
 	function toggleWith(arr,klass, pred){
@@ -560,13 +752,13 @@
 		}
 
 	}
-	
+
 	function toggleColor(arr,klass){
 		toggleWith(arr, klass, c => klass.startsWith('text') ? reg_txt_color.test(c) : reg_bg_color.test(c));
 	}
 
-	function toggleFont(arr,klass){
-		toggleWith(arr, klass, c => reg_font.test(c));
+	function toggleFont(arr,klass, reg=reg_font){
+		toggleWith(arr, klass, c => reg.test(c));
 	}
 
 	function toggleTextSize(arr,klass){
@@ -575,8 +767,8 @@
 		arr.filter(elm => !!elm.klass).forEach(elm => elm.klass = elm.klass.replaceAll('%%%', ' '))
 	}
 
-	let code_class = 'code text-sm font-mono px-8 py-6 bg-gray-200'
-	let quote_class = 'quote text-xl border-l-4 border-gray-800 px-4 font-serif'
+	let code_class = 'code text-sm font-mono px-8 py-6 bg-gray-100'
+	let quote_class = 'quote text-xl border-l-4 border-gray-800 px-4'
 
 
 
@@ -594,18 +786,22 @@
 		gklass = gklass+' '+klass
 	}
 
-	
+
 	let reg_txt_size = /md:text\-(sm\stext-sm|base\stext-base|xl\stext-lg|2xl\stext-xl|3xl\stext-xl|4xl\stext-2xl|5xl\stext-3xl|6xl\stext-4xl)/
 	// duplicated, to remove!
 	let g_reg_txt_size = /md:text\-(sm\stext-sm|base\stext-base|xl\stext-lg|2xl\stext-xl|3xl\stext-xl|4xl\stext-2xl|5xl\stext-3xl|6xl\stext-4xl)/
-	let reg_leading = /leading\-(none|tight|snug|normal|relaxed|loose)/
+	let reg_leading = /leading\-(none|tight|snug|normal|relaxed|loose)(\smd:leading\-(none|tight|snug|normal|relaxed|loose))?/
 	let reg_position = /text\-(left|right|center)/
 	let reg_padding = /^p[lrtb]\-/
 	let reg_margin = /^m[lrtb]\-/
-	let reg_txt_color = /^text\-(gray|red|yellow|green|blue|indigo|purple|pink|white|black|transparent)/
-	let reg_bg_color = /^bg\-(gray|red|yellow|green|blue|indigo|purple|pink|white|black|transparent)/
+	let reg_txt_color = /^text\-\[#/
+	let reg_bg_color = /^bg\-\[#/
+	// let reg_txt_color = /^text\-(gray|red|yellow|green|blue|indigo|purple|pink|white|black|transparent)/
+	// let reg_bg_color = /^bg\-(gray|red|yellow|green|blue|indigo|purple|pink|white|black|transparent)/
 	const reg_font = /font\-(thin|normal|semibold|bold|black)/
-	
+	const reg_pad = /p\-([0-4])/
+
+
 	function toggleClass(arr, klass, link, opts={}){
 
 		if(reg_txt_color.test(klass) || reg_bg_color.test(klass)){
@@ -613,9 +809,15 @@
 			dispatch('changeClass')
 			return
 		}
-		
+
 		if(reg_font.test(klass)){
-			toggleFont(arr,klass)
+			toggleFont(arr,klass, reg_font)
+			dispatch('changeClass')
+			return
+		}
+
+		if(reg_pad.test(klass)){
+			toggleFont(arr,klass, reg_pad)
 			dispatch('changeClass')
 			return
 		}
@@ -633,7 +835,7 @@
 						elm.href = link
 						elm.blank = !!opts.blank
 				}
-				
+
 				if(!elm.klass || !elm.klass.includes(klass)){
 					elm.klass = elm.klass ? elm.klass.split(' ').concat([klass]).join(' ') : klass
 					elm.tag = elm.tag
@@ -646,7 +848,7 @@
 					elm.href = link
 					elm.blank = !!opts.blank
 				}
-				if(!link && elm.tag != 'IMG' && elm.klass && elm.klass.includes('link')){
+				if(link===null && elm.tag != 'IMG' && elm.klass && elm.klass.includes('link')){
 					delete elm.href
 					delete elm.tag
 				}
@@ -663,11 +865,11 @@
 	function splitArr(arr, a_i, s_i, e_i){
 
 		let start = s_i
-		let end = e_i||arr[a_i]?.txt?.length||arr.length+1		
+		let end = e_i||arr[a_i]?.txt?.length||arr.length+1
 		if(e_i && e_i<s_i){
-			start = e_i 
-			end = s_i 
-		}  
+			start = e_i
+			end = s_i
+		}
 		if(arr[a_i] && !arr[a_i].txt){
 			return [{txt: ""},{txt: "", klass: arr[a_i].klass, tag: arr[a_i].tag, href: arr[a_i].href }]
 		}
@@ -684,15 +886,15 @@
 		if(e_i && arr[a_i]?.txt.slice(end,arr[a_i].txt.length)){
 			arr1[i++] = {txt: arr[a_i].txt.slice(end,arr[a_i].txt.length), klass: arr[a_i].klass, tag: arr[a_i].tag, href: arr[a_i].href}
 		}
-		 
+
 		return arr1
 	}
-	
+
 	// return last element if index is
 	function getIndex(node){
 		let p_node = node
 		if(!node) return -1
-		if(node.nodeName == 'DIV') {
+		if(node.nodeName == 'DIV'||node.nodeName == 'LI') {
 			p_node = node.children[0]
 			if(!p_node) return -1
 		}
@@ -700,19 +902,19 @@
 			p_node = node.parentNode
 		}
 		return [...p_node.parentNode.childNodes].filter(n => n.nodeName!='#text' || n.length>0).indexOf(p_node)
-		
+
 	}
-	
+
 	// EVENT FN
-	
-	function extractClasses(b_index,e_index){
+
+	function extractClasses(arr_elms,b_index,e_index){
 		if(b_index > e_index){
 			let x = b_index
-			b_index = e_index 
-			e_index =  x 
+			b_index = e_index
+			e_index =  x
 		}
 		let arr_slice = arr_elms.slice(b_index,e_index+1)
-		if(!arr_slice[0] || !arr_slice[0].klass) 
+		if(!arr_slice[0] || !arr_slice[0].klass)
 			return ''
 
 		let b_class = arr_slice[0].klass
@@ -731,14 +933,14 @@
 		return b_class
 	}
 
-	function extractLink(b_index,e_index){
+	function extractLink(arr_elms,b_index,e_index){
 		if(b_index > e_index){
 			let x = b_index
-			b_index = e_index 
-			e_index =  x 
+			b_index = e_index
+			e_index =  x
 		}
 		let arr_slice = arr_elms.slice(b_index,e_index+1)
-		
+
 		let href = ''
 		let blank = true
 
@@ -751,33 +953,44 @@
 				break
 			}
 		}
-		
+
 		return {href, blank}
 	}
 
-	
-	
+	// this sets gklass for the float, since float need to be applied for the parent
 	function setClasses(media){
-		let zmatch = media.klass.match(/z-\d+/)
-		let z = zmatch?.[0] || ""
-		let floatmatch = media.klass.match(/float-\w+/)
-		let float = floatmatch?.[0] || ""
-		if(z){
-			gklass = gklass.replace(/z-\d+/,'')
+		// let zmatch = media.klass.match(/z-\d+/)
+		// let z = zmatch?.[0] || ""
+		// let floatmatch = media.klass.match(/float-\w+/)
+		// let float = floatmatch?.[0] || ""
+		// gklass = gklass.replace(/z-\d+/,'')
+		// gklass = gklass.replace(/float-\w+/,'')
+		// gklass += ` ${z} ${float} `
+
+		const fclass = "flex items-start"
+		const fclassRev = "flex justify-end items-start"
+		const fclassCenter = "flex justify-center items-start"
+
+		gklass = gklass.replace(/flex.+start/,'')
+		if (media.klass.includes(fclass)) {
+			gklass += " "+fclass
 		}
-		if(float){
-			gklass = gklass.replace(/float-\w+/,'')
+		if (media.klass.includes(fclassRev)) {
+			gklass += " "+fclassRev
 		}
-		gklass += ` ${z} ${float} `
-		gklass = gklass.replace(/\s+/g,' ')
-		media.klass = media.klass.replace(/z-\d+/,'').replace(/float-\w+/,'')
+		if (media.klass.includes(fclassCenter)) {
+			gklass += " "+fclassCenter
+		}
+		gklass = gklass.replace(/\s+/g,' ').trim()
+		// media.klass = media.klass.replace(/z-\d+/,'').replace(/float-\w+/,'')
+
 	}
 
 	// embed image or video!
 	async function embedElement(e,b_node,b_index){
 		//TODO key code is not up/down/left/right
 		let src = b_node.textContent.split(' ').pop()
-		if(src && src.startsWith('https')){ 
+		if(src && src.startsWith('https')){
 			let is_img = await Util.testImgUrl(src.trim())
 			let is_video = Util.testVideoUrl(src.trim())
 			let iframe_vid = Util.parseYouTube(src.trim()) || Util.parseVimeo(src.trim())
@@ -791,7 +1004,7 @@
 							setVideo(img.klass,img.opts,src,b_index)
 						else if(iframe_vid)
 							setIframe(img.klass,iframe_vid,b_index)
-					}, 
+					},
 					media_type: is_img ? 'IMG': is_video ? 'VIDEO' : iframe_vid ? 'IFRAME' : 'AUDIO',
 					base_node: b_node,
 					src: iframe_vid || src,
@@ -812,6 +1025,7 @@
 		// }
 		dispatch('set_media',  {
 			setMedia: (img) => {
+				if(!img.src) return
 				setClasses(img)
 				if(img.media_type == "VIDEO"){
 					setVideo(img.klass,img.opts,img.src,i)
@@ -820,11 +1034,11 @@
 				}else if(img.media_type == "IFRAME"){
 					setIframe(img.klass, img.src,i)
 				}
-			}, 
-			base_node: b_node, 
+			},
+			base_node: b_node,
 			media_type: b_node.tagName,
-			src: elm?.href||'', 
-			klass: elm?.klass||'', 
+			src: elm?.href||'',
+			klass: elm?.klass||'',
 			...extra,
 			delMedia: () => delElm(i),
 			mouseX
@@ -841,27 +1055,27 @@
 		arr_elms[b_index] = {tag: 'IMG', href: src, txt: alt, klass}
 		refresh()
 	}
-	
+
 	function setVideo(klass,opts,src,b_index){
 		arr_elms[b_index] = {tag: 'VIDEO', href: src, opts, klass}
 		refresh()
 	}
-	
+
 	function setIframe(klass,src,b_index){
 		arr_elms[b_index] = {tag: 'IFRAME', href: src, klass}
 		refresh()
 	}
-	
+
 	let mouseX
 	function setMouseX(e){
 		mouseX = e.clientX
-	} 
+	}
 
 	let l_selected = ''
 	function fireSelect(e){
-		
-		 
-		let selection = window.getSelection() 
+
+
+		let selection = window.__edw.getSelection()
 		let selection_txt = selection.toString()
 		let b_node = selection.anchorNode
 		let e_node = selection.focusNode
@@ -874,12 +1088,23 @@
 			return
 		}
 		h_selection = null
-		if(selection_txt){				
+		if(selection_txt){
 			let base_node = b_index < e_index ? b_node : e_node
 			holdSelection(selection)
 			// extract classes to pass them to the toolbar!
-			let classes = extractClasses(b_index,e_index)
-			let {href, blank} = extractLink(b_index,e_index)
+			let elms_arr = arr_elms
+
+			let li_elm = b_node.tagName === "LI" ? b_node :
+				b_node.parentNode?.tagName === "LI" ? b_node.parentNode :
+				b_node.parentNode?.parentNode?.tagName === "LI" ? b_node.parentNode.parentNode : null
+
+			if(li_elm) {
+				let li_index = [...li_elm.parentNode.children].indexOf(li_elm)
+				elms_arr = arr_elms[li_index]?.elms || [{}]
+			}
+
+			let classes = extractClasses(elms_arr, b_index,e_index)
+			let {href, blank} = extractLink(elms_arr, b_index,e_index)
 			if(customTxtEditor(b_node)) {
 				return
 			}
@@ -892,12 +1117,12 @@
 		l_selected = selection_txt
 
 	}
-	
+
 	function hideSelect(){
 		dispatch('hideselect')
 	}
 
-	let edit_node 
+	let edit_node
 	function setEditorNode(node){
 		edit_node = node
 	}
@@ -935,8 +1160,9 @@
 	}
 
 	function pasteContent(event){
+
 		  const items = (event.clipboardData  || event.originalEvent.clipboardData).items;
-		 
+
 		  let blob = null;
 		  for (let i = 0; i < items.length; i++) {
 		    if (items[i].type.indexOf("image") === 0) {
@@ -948,64 +1174,94 @@
 		  }else{
 			  let src = event.path?.[0]
 			  // skib generated br
-			  if(src.tagName == "BR"){
+			  if(src?.tagName == "BR"){
 				  src = event.path?.[1]
-			   }
-			   dispatch('pasteTxt', src)
-			   // dispatch('pasteTxt', event.srcElement)
-			  event.stopPropagation()
+			  }
+
+			// DISABLING FORMATTING!
+			// RESTORE PASTE TEXT (remove comments in the next section)
+			/*if(html.trim()){*/
+				let clipboardData = event.clipboardData || window.__edw.clipboardData
+				let txt = clipboardData.getData('text')
+		 		event.preventDefault()
+				const selection = window.__edw.getSelection();
+				if (!selection.rangeCount) return false;
+				selection.deleteFromDocument();
+				selection.getRangeAt(0).insertNode(document.createTextNode(txt))
+				html = contentEditorNode.innerHTML
+				generateArr()
+				refresh()
+				dispatch('input')
+			/*}else{
+				dispatch('pasteTxt', src)
+			}*/
+
+			// dispatch('pasteTxt', event.srcElement)
+			event.stopPropagation()
 		  }
-		  
+
+	}
+
+	function getId(html) {
+    	if (!html) return ``;
+		const template = document.createElement("div");
+		template.innerHTML = html;
+		return (template.innerText??"").trim().toLowerCase().replace(/[\s\t\n]+/g,'-');
 	}
 
 	function triggerUpdate(){
 		dispatch('update')
 	}
 
-	$: ish1 = gklass.includes('text-6xl')
-	$: ish2 = gklass.includes('text-5xl')
-	$: ish3 = gklass.includes('text-4xl')
-	$: ish4 = gklass.includes('text-3xl')
-	$: ish5 = gklass.includes('text-2xl')
-	$: ish6 = gklass.includes('text-xl')
+	let contentEditorNode
+
+	$: ish1 = (gklass??"").includes('text-6xl')
+	$: ish2 = (gklass??"").includes('text-5xl')
+	$: ish3 = (gklass??"").includes('text-4xl')
+	$: ish4 = (gklass??"").includes('text-3xl')
+	$: ish5 = (gklass??"").includes('text-2xl')
+	$: ish6 = (gklass??"").includes('text-xl')
+
+	window.__edw.addEventListener('mousemove', triggerUpdate)
+
+	$: style=`color:var(--ft-text-color) !important;`+(settings?.txtSize?`font-size:${settings.txtSize}px !important;`:'')
 </script>
 
-<svelte:window on:mousemove={triggerUpdate} />
-
 {#if editable}
-	<div use:setEditorNode data-txtcustom={custom} data-txteditor="true" on:input on:paste={pasteContent} on:blur on:mousemove={setMouseX} on:mouseup|stopPropagation bind:innerHTML={html} spellcheck="false" contenteditable="true" on:keydown={handleKeydown}  class="outline-none focus:outline-none relative {gklass}" on:mouseup={fireSelect} on:keyup={fireSelect}  >
+	<div use:setEditorNode data-txtcustom={custom} bind:this={contentEditorNode} data-txteditor="true" on:paste={pasteContent} on:blur on:mousemove={setMouseX} on:mouseup|stopPropagation bind:innerHTML={html} spellcheck="false" contenteditable="true" on:keydown={handleKeydown}  class="outline-none focus:outline-none relative {gklass}" on:mouseup={fireSelect} on:keyup={fireSelect}
+	{style}
+	>
 	</div>
 {:else}
-	{#if ish1 }
-		<h1 class="relative {gklass}" data-txteditor="true">
-			{@html html}
+	{#if ish1}
+		<h1 id={getId(html)} class="relative {gklass}" {style} data-txteditor="true">
+			{@html html || "&nbsp;"}
 		</h1>
-	{:else if ish2 }
-		<h2 class="relative {gklass}" data-txteditor="true">
-			{@html html}
+	{:else if ish2}
+		<h2 id={getId(html)} class="relative {gklass}" {style} data-txteditor="true">
+			{@html html || "&nbsp;"}
 		</h2>
-	{:else if ish3 }
-		<h3 class="relative {gklass}" data-txteditor="true">
-			{@html html}
+	{:else if ish3}
+		<h3 id={getId(html)} class="relative {gklass}" {style} data-txteditor="true">
+			{@html html || "&nbsp;"}
 		</h3>
-	{:else if ish4 }
-		<h4 class="relative {gklass}" data-txteditor="true">
-			{@html html}
+	{:else if ish4}
+		<h4 id={getId(html)} class="relative {gklass}" {style} data-txteditor="true">
+			{@html html || "&nbsp;"}
 		</h4>
-	{:else if ish5 }
-		<h5 class="relative {gklass}" data-txteditor="true">
-			{@html html}
+	{:else if ish5}
+		<h5 id={getId(html)} class="relative {gklass}" {style} data-txteditor="true">
+			{@html html || "&nbsp;"}
 		</h5>
-	{:else if ish6 }
-		<h6 class="relative {gklass}" data-txteditor="true">
-			{@html html}
+	{:else if ish6}
+		<h6 id={getId(html)} class="relative {gklass}" {style} data-txteditor="true">
+			{@html html || "&nbsp;"}
 		</h6>
 	{:else if !html}
 		<br>
 	{:else}
-		<div class="relative {gklass}" data-txteditor="true">
+		<div class="relative {gklass}" {style} data-txteditor="true">
 			{@html html.replace(/<div.*Edit iframe.*?<\/div>/gs,'')}
 		</div>
 	{/if}
 {/if}
-					  

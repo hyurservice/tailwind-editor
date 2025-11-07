@@ -4,7 +4,7 @@ export const STYLE = {
     UNDERLINE: 'underline',
     LINETHROUGH: 'line-through',
     CODE: 'font-mono px-2 border border-gray-200',
-    LINK: 'underline text-blue-500 link',
+    LINK: 'link',
     CENTER: 'text-center',
     LEFT: 'text-left',
     RIGHT: 'text-right',
@@ -12,4 +12,6 @@ export const STYLE = {
 }
 
 
-export const PADDINGS = ['0','px','0.5','1','2','3','4','5','6','7','8','9','10','11','12','14','16','20','24','28','32','36','40','44','48','52','56','60','64','72','80','96']
+export const PADDINGS = ['0','px','0.5','1','2','3','4','5','10','20','40','60']
+
+export const SIZES = ['auto','full','3','4','10','16','20','32','40','60','80','96','128']
