@@ -1,9 +1,9 @@
-<script>				
-	import { createEventDispatcher} from 'svelte/internal'
+<script>
+	import { createEventDispatcher} from 'svelte'
 
 	import ColorPicker from './ColorPicker.svelte'
 	import CodeIcon from '../Icons/CodeIcon.svelte'
-	
+
 	import LinkInput from './LinkInput.svelte'
 	import JustifyIcon from '../Icons/JustifyIcon.svelte'
 	import Leading from './Leading.svelte'
@@ -12,7 +12,7 @@
 	import {STYLE} from './const'
 	import Spacing from './Spacing.svelte';
 	import FontSizeList from "./FontSizeList.svelte";
-	
+
 	export let tools = ['headings', 'font-sizes', 'bold', 'italic', 'underline', 'linethrough', 'code', 'link', 'text-color', 'bg-color', 'fill-color', 'justify', 'text-align', 'padding', 'margin', 'leading', 'clear'];
 	export let setClass
 	export let setGClass
@@ -27,7 +27,7 @@
 	export let base_node
 	let dispatch = createEventDispatcher()
 	export let mouseX
-	
+
 	function firstParentRelative(n){
 		// Make element absolute if you want to restore this
 		// while(n.parentNode && n.parentNode.tagName){
@@ -43,10 +43,10 @@
 	function setPosition(node){
 		let e = window.event;
 		if(!base_node) return
-		
+
 		let elm = base_node.parentNode.tagName == 'DIV' ? base_node : base_node.parentNode
 		let rect = elm.parentNode.getBoundingClientRect()
-		let posY = rect.top-10; 
+		let posY = rect.top-10;
 		if(elm.previousElementSibling){
 			let ch_nodes = [...elm.parentNode.childNodes]
 			let siblings = ch_nodes.slice(0,ch_nodes.indexOf(elm)+1)
@@ -63,7 +63,7 @@
 			pos_top = 30
 		node.style.top = `${pos_top}px`
 		mouseX = mouseX || 10
-		let mx = mouseX-node.offsetWidth/2 
+		let mx = mouseX-node.offsetWidth/2
 		mx = mx > 0 ? mx : 10
 		mx = mouseX+node.offsetWidth/2 < window.innerWidth ? mx : window.innerWidth-node.offsetWidth
 		node.style.left = `${mx-rel_rect.left}px`
@@ -83,7 +83,7 @@
 		return reg.test(classes)
 	}
 
-	
+
 
 	let e_classes = {}
 
@@ -114,7 +114,7 @@
 			n_classes.splice(n_classes.indexOf(klass),1)
 			classes = n_classes.join(' ')
 		}
-		
+
 		initEClasses()
 	}
 
@@ -140,8 +140,8 @@
 		}
 		initEClasses()
 	}
-	
-	
+
+
 	// duplicated in contenteditor (TO UPDATE!)
 	function replaceGClass(klass, reg, gklass){
 		let classes = gklass.split(' ')
@@ -158,11 +158,11 @@
 		gklass = gklass.split(' ').concat([klass]).join(' ')
 		// console.log({gklass})
 
-		
+
 		return gklass
 	}
 
-	// duplicated!! 
+	// duplicated!!
 	const reg_position = /^text\-(left|right|center)/
 	const reg_padding = /^p[lrtb]\-/
 	const reg_margin = /^m[lrtb]\-/
@@ -188,17 +188,17 @@
 			n_classes.splice(n_classes.indexOf(klass),1)
 			g_classes = n_classes.join(' ')
 		}
-		
+
 		initEClasses()
 	}
-	
+
 </script>
 
 <div use:setPosition on:mousedown|stopPropagation class="se-toolbar flex fixed font-normal -mt-6 shadow bg-white z-950 text-base rounded">
 	<div class="rounded flex items-center shadow-lg border border-gray-200  text-gray-700">
 		{#if tools.includes('headings')}
 			<div class="se-tool border-r" title="Headings">
-				<HeadingList setClass={setGClass} klass={g_classes} />	
+				<HeadingList setClass={setGClass} klass={g_classes} />
 			</div>
 		{/if}
 		{#if tools.includes('font-sizes')}

@@ -1,11 +1,11 @@
 
 <script>
-	import { tick, createEventDispatcher, onMount } from 'svelte/internal';
+	import { tick, createEventDispatcher, onMount } from 'svelte';
 	import Util from '../lib/Util';
 	let dispatch = createEventDispatcher()
 
 	let arr_elms = []
-	
+
 	export let html = ''
 	export let gklass = ''
 	export let editable = true
@@ -17,7 +17,7 @@
 		let n_elms = []
 		for(let elm of [...div.childNodes]){
 			const itrue = (attr) => elm.hasAttribute(attr)
-			
+
 			if(elm.nodeName == 'BR')
 				n_elms.push({tag: 'BR',txt: ""})
 			else if(elm.nodeName == 'A')
@@ -36,11 +36,11 @@
 				n_elms.push({htxt: `${elm.outerHTML}`, klass: elm.classList&&[...elm.classList].join(' ')})
 			else if(elm.nodeName == '#text' && elm.length>0 )
 				n_elms.push({txt: elm.textContent})
-			
+
 		}
 
 
-		
+
 		arr_elms = n_elms
 		await tick()
 		refreshEvents()
@@ -51,7 +51,7 @@
 	$: if(mounted){
 		if(html)
 			generateArr()
-		else 
+		else
 			arr_elms = []
 	}
 
@@ -63,10 +63,10 @@
 		mounted = true
 		generateArr()
 	})
-	
+
 	const char_keys = ['B'.charCodeAt(0),'U'.charCodeAt(0),'I'.charCodeAt(0)]
 	async function handleKeydown(e){
-		
+
 		if(e.ctrlKey && char_keys.includes(e.keyCode)){
 			e.preventDefault()
 			return
@@ -78,7 +78,7 @@
 		let end_i = selection.focusOffset
 		if(!b_node) return
 		let elm_node = (b_node?.tagName=='DIV') ? b_node : b_node.parentNode.tagName == 'DIV' ? b_node.parentNode : b_node.parentNode.parentNode
-		
+
 		let b_index = getIndex(b_node)
 		let e_index = getIndex(e_node)
 
@@ -86,7 +86,7 @@
 			let children = [...n.childNodes]
 			let last_child = children[children.length-1]
 			if(!last_child) return
-			last_child = ['#text','BR','IMG','VIDEO'].includes(last_child.nodeName)||last_child?.dataset?.iframe ? last_child : last_child.childNodes[0] 
+			last_child = ['#text','BR','IMG','VIDEO'].includes(last_child.nodeName)||last_child?.dataset?.iframe ? last_child : last_child.childNodes[0]
 			if(!last_child) return false
 			let pos = d == "up" ? last_child.textContent.length : 0
 			try{
@@ -98,7 +98,7 @@
 
 
 		// up key
-		if(e.keyCode == 38){ 
+		if(e.keyCode == 38){
 			if (b_node == e_node && start_i == 0 && (b_index <= 0)){
 				// move to the previous node
 				let pv_elm = elm_node.previousElementSibling
@@ -114,17 +114,17 @@
 					return false
 				}
 			}
-			
+
 		}
 		// down key
-		if(e.keyCode == 40){ 
+		if(e.keyCode == 40){
 			// get index
 			if (b_node == e_node){
 				// if(b_index == arr_elms.length-1 || (b_index == arr_elms.length-2 && arr_elms[arr_elms.length-1].tag == 'BR') || b_node == elm_node){
 				if(b_index == arr_elms.length-1 || ((b_index == -1 || start_i == arr_elms.length-1) && arr_elms[arr_elms.length-1].tag == 'BR')){
 
 					let next_elm = elm_node.nextElementSibling
-					
+
 					while (next_elm && next_elm.nextElementSibling && !next_elm.isContentEditable) {
 						next_elm = next_elm.nextElementSibling
 					}
@@ -149,8 +149,8 @@
 			}
 			let elms = arr_elms.length && arr_elms[arr_elms.length-1].tag == 'BR' ? arr_elms.slice(0,arr_elms.length-1) : arr_elms
 			if((!~b_index && !elms.length) || (b_node.tagName == 'DIV' && b_index==0 && start_i == elms.length) || (b_index == elms.length-1 && start_i == elms[elms.length-1].txt?.length && !selection.toString())){
-				let l_node_index 
-				let l_node_end 
+				let l_node_index
+				let l_node_end
 				let pv_elm = elm_node
 				if(pv_elm && pv_elm.isContentEditable){
 					if(!pv_elm.childNodes.length)
@@ -158,9 +158,9 @@
 					else{
 						l_node_index = pv_elm.childNodes.length-1
 						l_node_end = pv_elm.childNodes[pv_elm.childNodes.length-1].textContent.length
-					} 
-				}	
-				
+					}
+				}
+
 				dispatch('merge_next')
 				e.preventDefault()
 
@@ -185,13 +185,13 @@
 				return
 			}
 			if(start_i==0 && (b_index==0 || b_index == -1) && !selection.toString()){
-				let l_node_index 
-				let l_node_end 
+				let l_node_index
+				let l_node_end
 				let pv_elm = elm_node.previousElementSibling
 				// STEP to skip grammarly (woraround for now!) -- TODO - fix
 				if(pv_elm && !pv_elm.isContentEditable)
 					pv_elm = pv_elm.previousElementSibling
-				
+
 				if(pv_elm && pv_elm.isContentEditable){
 					if(!pv_elm.childNodes.length){
 						pv_elm.focus()
@@ -199,8 +199,8 @@
 					else{
 						l_node_index = pv_elm.childNodes.length-1
 						l_node_end = pv_elm.childNodes[pv_elm.childNodes.length-1].textContent.length
-					} 
-				}	
+					}
+				}
 				e.preventDefault()
 				dispatch('merge_prev', html)
 				await (new Promise(r => setTimeout(r)))
@@ -217,7 +217,7 @@
 				}
 			}
 		}
-		
+
 		// enter key
 		if(e.keyCode == 13 && e.shiftKey == false){
 			let elm_html = ''
@@ -230,10 +230,10 @@
 			}
 
 			if(arr_elms.length>0 && ~b_index){
-				
+
 				let n_arr = splitArr(arr_elms,elm_index,start_i)
 				arr_elms.splice(elm_index,1,...n_arr)
-				
+
 				let s_index = elm_index+(start_i==0 ? 0 :1)
 				elm_html = extractHTML(arr_elms.slice(0, s_index))
 				next_html = extractHTML(arr_elms.slice(s_index, arr_elms.length))
@@ -247,10 +247,10 @@
 		}
 
 		if(e.keyCode == 13 && e.shiftKey == true){
-			
+
 			let div_elm = b_node.nodeName != '#text' ? b_node.parentNode : b_node.parentNode.parentNode
 			await (new Promise(r => setTimeout(r)))
-			
+
 			if(customTxtEditor(div_elm)) {
 				return
 			}
@@ -268,7 +268,7 @@
 				// parent child text nodes
 				let children = [...parent.childNodes]
 				let elms = []
-				
+
 				for (let ch of children){
 					if(ch && ch.textContent){
 						elms.push({txt: ch.textContent, klass: arr_elms[b_index]?.klass||"", tag: parent.tagName})
@@ -280,7 +280,7 @@
 				arr_elms.splice(b_index, 1,...elms)
 				refresh()
 				await (new Promise(r => setTimeout(r)))
-				
+
 				let p_elm = div_elm.childNodes[elms[0].tag == 'BR' ? b_index: b_index+2]
 				selection.setBaseAndExtent(p_elm, 0, p_elm, 0);
 			}
@@ -327,7 +327,7 @@
 				str += `<div class="iframe-wrap" data-iframe="true" contenteditable="false">
 					${ed_str}
 					<iframe src=${elm.href} class="${elm.klass}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen />
-				</div>`	
+				</div>`
 			}else if(elm.klass){
 				str += `<span class="${elm.klass}">${elm_txt}</span>`
 			}else{
@@ -337,7 +337,7 @@
 		return str
 	}
 
-	function refresh(){	
+	function refresh(){
 		html = extractHTML(arr_elms)
 	}
 
@@ -363,32 +363,32 @@
 		h_selection = {
 			start_i: selection.anchorOffset ,
 			end_i: selection.focusOffset ,
-			
+
 			b_node: selection.anchorNode,
 			e_node: selection.focusNode
 		}
 	}
-	
-	 
+
+
 	async function setClass(class_name,link,opts={}){
-		
+
 		arr_elms.forEach(e => delete e.selected)
-		let selection = window.getSelection() 
+		let selection = window.getSelection()
 		let selection_txt = selection.toString()
 
 		let	start_i = h_selection ? h_selection.start_i : selection.anchorOffset
 		let end_i = h_selection ? h_selection.end_i : selection.focusOffset
-		
+
 		let b_node = h_selection ? h_selection.b_node : selection.anchorNode
 		let e_node = h_selection ? h_selection.e_node : selection.focusNode
-		
+
 		let b_index = getIndex(b_node)
 		let e_index = getIndex(e_node)
-		
-		let same_node = b_node == e_node 
-		 
+
+		let same_node = b_node == e_node
+
 		let reverse = b_index > e_index
-		
+
 		let sb_index = b_index
 		let se_index = e_index
 		if(reverse){
@@ -398,63 +398,63 @@
 			start_i = end_i
 			end_i = x
 		}
-		
+
 		let edit_node = b_node.parentNode
 		if(b_node.parentNode.tagName !== 'DIV'){
 			edit_node = edit_node.parentNode
 		}
-		
+
 		let n_arr  = arr_elms.slice(sb_index,se_index+1)
-			
+
 		let arr1 = splitArr(n_arr,0,start_i, same_node && end_i)
-		 
-		let up_arr = arr1.length == 1 ? arr1 : arr1.length == 2&&(start_i==0||end_i==0) ? [arr1[0]] : [arr1[1]] 
-		
+
+		let up_arr = arr1.length == 1 ? arr1 : arr1.length == 2&&(start_i==0||end_i==0) ? [arr1[0]] : [arr1[1]]
+
 		n_arr.splice(0,1,...arr1)
 		let arr2 = []
 		if(!same_node){
-			arr2 = splitArr(n_arr,n_arr.length-1, end_i, false) 
+			arr2 = splitArr(n_arr,n_arr.length-1, end_i, false)
 			n_arr.splice(n_arr.length-1,1,...arr2)
-			up_arr = up_arr.concat(n_arr.slice(1,n_arr.length-(arr2.length == 1 ? 0:1)))  
+			up_arr = up_arr.concat(n_arr.slice(1,n_arr.length-(arr2.length == 1 ? 0:1)))
 		}
 
 		toggleClass(up_arr, class_name,link, opts)
 		up_arr.forEach(e => e.selected= true)
-		
+
 		arr_elms.splice(sb_index,se_index-sb_index+1,...n_arr)
 
 		let p_selector = {}
 		mergeArr(p_selector)
-		
+
 		refresh()
 
-		h_selection = null 
+		h_selection = null
 
 		await tick()
 
 		let ch_nodes = [...edit_node.childNodes].filter(elm => elm.nodeName !== '#text' || (elm.nodeName == '#text' && elm.length>0))
-		
+
 		let start_node = ch_nodes[p_selector.a_start]
 		let end_node = ch_nodes[p_selector.a_end]
 		start_node = start_node.nodeName == '#text' ? start_node : start_node.firstChild
 		end_node = end_node.nodeName == '#text' ? end_node : end_node.firstChild
 
 		await (new Promise(r => setTimeout(r)))
-		
+
 		window.getSelection().removeAllRanges();
 		window.getSelection().setBaseAndExtent(start_node, p_selector.s_start, end_node, p_selector.s_end);
-		
+
 		holdSelection(window.getSelection())
 
-		
-	} 
-	
+
+	}
+
 
 	async function setGClass(klass){
-		
+
 		if(klass){
 			if(reg_txt_size.test(klass)){
-				
+
 				gklass = gklass.replace(code_class,'').replace(quote_class,'').trim()
 				replaceGClass(klass, reg_txt_size)
 
@@ -464,7 +464,7 @@
 					gklass = gklass.replace(quote_class,'').replace(g_reg_txt_size,'').trim()
 					gklass +=  ' '+code_class
 				}
-			
+
 			}else if( klass.startsWith('quote')){
 
 				if(!gklass.includes(quote_class)){
@@ -484,61 +484,61 @@
 				replaceGClass(klass, reg_leading)
 			}else {
 				toggleGClass(klass)
-			} 
-			 
+			}
+
 		}else{
 			elm.klass = klass
 		}
 		dispatch('changeClass')
 	}
-	
+
 	function mergeArr(p_selector){
 		let n_arr = [{...arr_elms[0]}]
-		
+
 		if(arr_elms[0].selected){
 			p_selector.s_start = 0
 			p_selector.a_start = 0
 			p_selector.s_end = arr_elms[0].txt.length
 			p_selector.a_end = 0
 		}
-		
+
 		for(let i=1; i<arr_elms.length;i++){
 
 				if(arr_elms[i].txt && arr_elms[i].tag == arr_elms[i-1].tag && arr_elms[i].klass == arr_elms[i-1].klass){
-					
+
 					if(arr_elms[i].selected && !arr_elms[i-1].selected){
 						p_selector.s_start = n_arr[n_arr.length-1].txt.length
 						p_selector.a_start = n_arr.length-1
 						p_selector.s_end = n_arr[n_arr.length-1].txt.length+arr_elms[i].txt.length
 						p_selector.a_end = n_arr.length-1
 					}
-				  
-					n_arr[n_arr.length-1].txt += arr_elms[i].txt 
-					
+
+					n_arr[n_arr.length-1].txt += arr_elms[i].txt
+
 
 				}else{
 					if(arr_elms[i].txt){
 						n_arr.push({...arr_elms[i]})
-						
+
 						if(arr_elms[i].selected && !arr_elms[i-1].selected){
 							p_selector.s_start = 0
 							p_selector.a_start = n_arr.length-1
 							p_selector.s_end = n_arr[n_arr.length-1].txt.length
 							p_selector.a_end = n_arr.length-1
 						}
-						
+
 					}else if(arr_elms[i].tag == 'BR'){
 						n_arr.push({...arr_elms[i]})
 					}
 				}
-				
+
 				if(arr_elms[i].selected && arr_elms[i-1].selected){
 					p_selector.s_end = n_arr[n_arr.length-1].txt.length
 					p_selector.a_end = n_arr.length-1
 				}
-			
+
 		}
-		
+
 		arr_elms = n_arr
 	}
 
@@ -560,7 +560,7 @@
 		}
 
 	}
-	
+
 	function toggleColor(arr,klass){
 		toggleWith(arr, klass, c => klass.startsWith('text') ? reg_txt_color.test(c) : reg_bg_color.test(c));
 	}
@@ -594,7 +594,7 @@
 		gklass = gklass+' '+klass
 	}
 
-	
+
 	let reg_txt_size = /md:text\-(sm\stext-sm|base\stext-base|xl\stext-lg|2xl\stext-xl|3xl\stext-xl|4xl\stext-2xl|5xl\stext-3xl|6xl\stext-4xl)/
 	// duplicated, to remove!
 	let g_reg_txt_size = /md:text\-(sm\stext-sm|base\stext-base|xl\stext-lg|2xl\stext-xl|3xl\stext-xl|4xl\stext-2xl|5xl\stext-3xl|6xl\stext-4xl)/
@@ -605,7 +605,7 @@
 	let reg_txt_color = /^text\-(gray|red|yellow|green|blue|indigo|purple|pink|white|black|transparent)/
 	let reg_bg_color = /^bg\-(gray|red|yellow|green|blue|indigo|purple|pink|white|black|transparent)/
 	const reg_font = /font\-(thin|normal|semibold|bold|black)/
-	
+
 	function toggleClass(arr, klass, link, opts={}){
 
 		if(reg_txt_color.test(klass) || reg_bg_color.test(klass)){
@@ -613,7 +613,7 @@
 			dispatch('changeClass')
 			return
 		}
-		
+
 		if(reg_font.test(klass)){
 			toggleFont(arr,klass)
 			dispatch('changeClass')
@@ -633,7 +633,7 @@
 						elm.href = link
 						elm.blank = !!opts.blank
 				}
-				
+
 				if(!elm.klass || !elm.klass.includes(klass)){
 					elm.klass = elm.klass ? elm.klass.split(' ').concat([klass]).join(' ') : klass
 					elm.tag = elm.tag
@@ -663,11 +663,11 @@
 	function splitArr(arr, a_i, s_i, e_i){
 
 		let start = s_i
-		let end = e_i||arr[a_i]?.txt?.length||arr.length+1		
+		let end = e_i||arr[a_i]?.txt?.length||arr.length+1
 		if(e_i && e_i<s_i){
-			start = e_i 
-			end = s_i 
-		}  
+			start = e_i
+			end = s_i
+		}
 		if(arr[a_i] && !arr[a_i].txt){
 			return [{txt: ""},{txt: "", klass: arr[a_i].klass, tag: arr[a_i].tag, href: arr[a_i].href }]
 		}
@@ -684,10 +684,10 @@
 		if(e_i && arr[a_i]?.txt.slice(end,arr[a_i].txt.length)){
 			arr1[i++] = {txt: arr[a_i].txt.slice(end,arr[a_i].txt.length), klass: arr[a_i].klass, tag: arr[a_i].tag, href: arr[a_i].href}
 		}
-		 
+
 		return arr1
 	}
-	
+
 	// return last element if index is
 	function getIndex(node){
 		let p_node = node
@@ -700,19 +700,19 @@
 			p_node = node.parentNode
 		}
 		return [...p_node.parentNode.childNodes].filter(n => n.nodeName!='#text' || n.length>0).indexOf(p_node)
-		
+
 	}
-	
+
 	// EVENT FN
-	
+
 	function extractClasses(b_index,e_index){
 		if(b_index > e_index){
 			let x = b_index
-			b_index = e_index 
-			e_index =  x 
+			b_index = e_index
+			e_index =  x
 		}
 		let arr_slice = arr_elms.slice(b_index,e_index+1)
-		if(!arr_slice[0] || !arr_slice[0].klass) 
+		if(!arr_slice[0] || !arr_slice[0].klass)
 			return ''
 
 		let b_class = arr_slice[0].klass
@@ -734,11 +734,11 @@
 	function extractLink(b_index,e_index){
 		if(b_index > e_index){
 			let x = b_index
-			b_index = e_index 
-			e_index =  x 
+			b_index = e_index
+			e_index =  x
 		}
 		let arr_slice = arr_elms.slice(b_index,e_index+1)
-		
+
 		let href = ''
 		let blank = true
 
@@ -751,12 +751,12 @@
 				break
 			}
 		}
-		
+
 		return {href, blank}
 	}
 
-	
-	
+
+
 	function setClasses(media){
 		let zmatch = media.klass.match(/z-\d+/)
 		let z = zmatch?.[0] || ""
@@ -777,7 +777,7 @@
 	async function embedElement(e,b_node,b_index){
 		//TODO key code is not up/down/left/right
 		let src = b_node.textContent.split(' ').pop()
-		if(src && src.startsWith('https')){ 
+		if(src && src.startsWith('https')){
 			let is_img = await Util.testImgUrl(src.trim())
 			let is_video = Util.testVideoUrl(src.trim())
 			let iframe_vid = Util.parseYouTube(src.trim()) || Util.parseVimeo(src.trim())
@@ -791,7 +791,7 @@
 							setVideo(img.klass,img.opts,src,b_index)
 						else if(iframe_vid)
 							setIframe(img.klass,iframe_vid,b_index)
-					}, 
+					},
 					media_type: is_img ? 'IMG': is_video ? 'VIDEO' : iframe_vid ? 'IFRAME' : 'AUDIO',
 					base_node: b_node,
 					src: iframe_vid || src,
@@ -820,11 +820,11 @@
 				}else if(img.media_type == "IFRAME"){
 					setIframe(img.klass, img.src,i)
 				}
-			}, 
-			base_node: b_node, 
+			},
+			base_node: b_node,
 			media_type: b_node.tagName,
-			src: elm?.href||'', 
-			klass: elm?.klass||'', 
+			src: elm?.href||'',
+			klass: elm?.klass||'',
 			...extra,
 			delMedia: () => delElm(i),
 			mouseX
@@ -841,27 +841,27 @@
 		arr_elms[b_index] = {tag: 'IMG', href: src, txt: alt, klass}
 		refresh()
 	}
-	
+
 	function setVideo(klass,opts,src,b_index){
 		arr_elms[b_index] = {tag: 'VIDEO', href: src, opts, klass}
 		refresh()
 	}
-	
+
 	function setIframe(klass,src,b_index){
 		arr_elms[b_index] = {tag: 'IFRAME', href: src, klass}
 		refresh()
 	}
-	
+
 	let mouseX
 	function setMouseX(e){
 		mouseX = e.clientX
-	} 
+	}
 
 	let l_selected = ''
 	function fireSelect(e){
-		
-		 
-		let selection = window.getSelection() 
+
+
+		let selection = window.getSelection()
 		let selection_txt = selection.toString()
 		let b_node = selection.anchorNode
 		let e_node = selection.focusNode
@@ -874,7 +874,7 @@
 			return
 		}
 		h_selection = null
-		if(selection_txt){				
+		if(selection_txt){
 			let base_node = b_index < e_index ? b_node : e_node
 			holdSelection(selection)
 			// extract classes to pass them to the toolbar!
@@ -892,12 +892,12 @@
 		l_selected = selection_txt
 
 	}
-	
+
 	function hideSelect(){
 		dispatch('hideselect')
 	}
 
-	let edit_node 
+	let edit_node
 	function setEditorNode(node){
 		edit_node = node
 	}
@@ -936,7 +936,7 @@
 
 	function pasteContent(event){
 		  const items = (event.clipboardData  || event.originalEvent.clipboardData).items;
-		 
+
 		  let blob = null;
 		  for (let i = 0; i < items.length; i++) {
 		    if (items[i].type.indexOf("image") === 0) {
@@ -955,7 +955,7 @@
 			   // dispatch('pasteTxt', event.srcElement)
 			  event.stopPropagation()
 		  }
-		  
+
 	}
 
 	function triggerUpdate(){
@@ -1008,4 +1008,3 @@
 		</div>
 	{/if}
 {/if}
-					  

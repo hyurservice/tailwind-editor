@@ -1,10 +1,10 @@
 <script>
 	import CheckIcon from '../Icons/CheckIcon.svelte'
-	import {createEventDispatcher} from 'svelte/internal'
+	import {createEventDispatcher} from 'svelte'
 	let dispatch = createEventDispatcher()
 	export let list = []
 	export let selected
-	
+
 	function select(e,val){
 		selected = val
 		dispatch('select',selected)
