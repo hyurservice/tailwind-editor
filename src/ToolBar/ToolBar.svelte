@@ -1,5 +1,5 @@
 <script>
-	import { createEventDispatcher} from 'svelte/internal'
+	import { createEventDispatcher} from 'svelte'
 
 	import ColorPicker from './ColorPicker.svelte'
 	import CodeIcon from '../Icons/CodeIcon.svelte'
@@ -221,8 +221,8 @@
 
 <div use:setPosition on:mousedown|stopPropagation class="se-toolbar flex fixed font-normal -mt-6 shadow bg-white z-50 z-950 text-base rounded">
 	<div class="rounded flex items-center shadow-lg border border-gray-200  text-gray-700">
-        {#if tools.includes('headings')}
-			<div class="se-tool border-r {basic ? 'hidden':''}">
+		{#if tools.includes('headings')}
+			<div class="se-tool border-r {basic ? 'hidden':''}" title="Headings">
 				<HeadingList setClass={setGClass} klass={g_classes} />
 			</div>
 		{/if}

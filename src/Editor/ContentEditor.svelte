@@ -1,6 +1,6 @@
 
 <script>
-	import { tick, createEventDispatcher, onMount } from 'svelte/internal';
+	import { tick, createEventDispatcher, onMount } from 'svelte';
 	import Util from '../lib/Util';
 	let dispatch = createEventDispatcher()
 

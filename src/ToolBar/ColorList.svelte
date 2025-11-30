@@ -1,14 +1,14 @@
 
 <script>
 	import NoColor from '../Icons/NoColor.svelte'
-	import {createEventDispatcher} from 'svelte/internal'
+	import {createEventDispatcher} from 'svelte'
 
 	let dispatch = createEventDispatcher()
 	export let selected_color = ''
 	let colors = [
 		'gray','red','yellow','green','blue','indigo','purple','pink'
 	]
-	
+
 	function selectColor(e,color){
 		selected_color = color
 		dispatch('select',color)
@@ -17,7 +17,7 @@
 	}
 </script>
 
-<div class="flex">	
+<div class="flex">
 	<div class="shadow-xl border border-gray-200">
 		<div class="flex items-center">
 			<div class="se-color bg-black  w-5 h-5 cursor-pointer" on:click={(e) => selectColor(e,`black`)}>
