@@ -8,7 +8,7 @@
     import { STYLE } from "./const";
     const dispatch = createEventDispatcher()
 
-    $: posKlass = lNode?.getBoundingClientRect()?.bottom > window.__edw.innerHeight ? 'bottom-0 mb-8' : '' 
+    $: posKlass = lNode?.getBoundingClientRect()?.bottom > window.innerHeight ? 'bottom-0 mb-8' : ''
 
 	let lNode
 
@@ -36,17 +36,17 @@
         {/if}
         <TriangleDown />
     </div>
-    
+
     {#if open}
         <div class="absolute shadow-xl {posKlass} bg-white" bind:this={lNode}>
             <div class="px-2 { e_classes.left ? 'text-blue-600':'text-gray-700'} cursor-pointer select-none hover:bg-gray-200 py-1 h-full flex items-center"  on:mousedown={() => select(STYLE.LEFT)}>
                 <LeftIcon />
             </div>
-            
+
             <div class="px-2 { e_classes.center ? 'text-blue-600':'text-gray-700'} cursor-pointer select-none hover:bg-gray-200 py-1 h-full flex items-center" on:mousedown={() => select(STYLE.CENTER)}>
                 <CenterIcon />
             </div>
-            
+
             <div class="px-2 { e_classes.right ? 'text-blue-600':'text-gray-700'} cursor-pointer select-none hover:bg-gray-200 py-1 h-full flex items-center border-r"  on:mousedown={() => select(STYLE.RIGHT)}>
                 <RightIcon />
             </div>

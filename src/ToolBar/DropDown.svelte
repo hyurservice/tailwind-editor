@@ -1,4 +1,5 @@
 <script>
+    import {onMount} from 'svelte'
 
 	import List from './List.svelte'
 	let klass = ''
@@ -6,7 +7,7 @@
 	export {klass as class}
 	export let selected
 
-	$: posKlass = lNode?.getBoundingClientRect()?.bottom > window.__edw.innerHeight ? 'bottom-0 mb-8' : ''
+	$: posKlass = lNode?.getBoundingClientRect()?.bottom > window.innerHeight ? 'bottom-0 mb-8' : ''
 
 	let lNode
 
@@ -48,7 +49,13 @@
 		open = false
 	}
 
-	window.__edw.addEventListener('click', hideList)
+    onMount(() => {
+        window.addEventListener('click', hideList)
+
+        return () => {
+            window.removeEventListener('click', hideList);
+        };
+    })
 </script>
 
 <div class="se-dropdown relative">

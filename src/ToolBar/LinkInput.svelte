@@ -1,4 +1,6 @@
 <script>
+    import {onMount} from 'svelte'
+
   export let href;
   export let blank = true
   let show_link = false;
@@ -25,8 +27,14 @@
     setLink("link", null);
     hideLink();
   }
-  
-	window.__edw.addEventListener('click', hideLink)
+
+  onMount(() => {
+      window.addEventListener('click', hideLink)
+
+      return () => {
+          window.removeEventListener('click', hideLink);
+      };
+  })
 </script>
 
 <div class="relative" on:mousedown>

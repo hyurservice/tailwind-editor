@@ -3,7 +3,7 @@
   import ToolBar from "../ToolBar/ToolBar.svelte";
   import MediaInput from "../ToolBar/MediaInput.svelte";
   import EditorHistory from "../lib/EditorHistory";
-  import {createEventDispatcher} from 'svelte'
+  import {createEventDispatcher, onMount} from 'svelte'
   // import "../global.css"
   const dispatch = createEventDispatcher()
 
@@ -326,7 +326,13 @@
     }
   }
 
-  window.__edw.addEventListener('mousedown', triggerChange)
+  onMount(() => {
+      window.addEventListener('mousedown', triggerChange)
+
+      return () => {
+          window.removeEventListener('mousedown', triggerChange);
+      };
+  })
 </script>
 
 {#if show_toolbar && editable}

@@ -11,7 +11,7 @@
     export let g_classes = ""
     export let title= "Padding"
 
-    $: posKlass = lNode?.getBoundingClientRect()?.bottom > window.__edw.innerHeight ? 'bottom-0 mb-8' : '' 
+    $: posKlass = lNode?.getBoundingClientRect()?.bottom > window.innerHeight ? 'bottom-0 mb-8' : ''
 
 	let lNode
 
@@ -43,25 +43,25 @@
     </div>
     {#if open}
         <div class="absolute shadow-xl bg-white grid grid-cols-2 w-24 p-2 gap-1 text-xs font-semibold {posKlass}" bind:this={lNode}>
-                Top 
+                Top
                 <select class="focus:outline-none border" bind:value={pt} on:change={updateP} on:blur={updateP}>
                     {#each PADDINGS as p}
                         <option value="{mp}t-{p}">{p}</option>
                     {/each}
                 </select>
-                Right 
+                Right
                 <select class="focus:outline-none border" bind:value={pr} on:change={updateP} on:blur={updateP}>
                     {#each PADDINGS as p}
                         <option value="{mp}r-{p}">{p}</option>
                     {/each}
                 </select>
-                Bottom 
+                Bottom
                 <select class="focus:outline-none border" bind:value={pb} on:change={updateP} on:blur={updateP}>
                     {#each PADDINGS as p}
                         <option value="{mp}b-{p}">{p}</option>
                     {/each}
                 </select>
-                Left 
+                Left
                 <select class="focus:outline-none border" bind:value={pl} on:change={updateP} on:blur={updateP}>
                     {#each PADDINGS as p}
                         <option value="{mp}l-{p}">{p}</option>
