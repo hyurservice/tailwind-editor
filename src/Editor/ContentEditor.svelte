@@ -973,7 +973,7 @@
 <svelte:window on:mousemove={triggerUpdate} />
 
 {#if editable}
-	<div use:setEditorNode data-txtcustom={custom} data-txteditor="true" on:input on:paste={pasteContent} on:blur on:mousemove={setMouseX} on:mouseup|stopPropagation bind:innerHTML={html} spellcheck="false" contenteditable="true" on:keydown={handleKeydown}  class="outline-none focus:outline-none relative {gklass}" on:mouseup={fireSelect} on:keyup={fireSelect}  >
+	<div use:setEditorNode data-txtcustom={custom} data-txteditor="true" on:input on:paste={pasteContent} on:blur on:mousemove={setMouseX} bind:innerHTML={html} spellcheck="false" contenteditable="true" on:keydown={handleKeydown}  class="outline-none focus:outline-none relative {gklass}" on:mouseup|stopPropagation={fireSelect} on:keyup={fireSelect}  >
 	</div>
 {:else}
 	{#if ish1 }
