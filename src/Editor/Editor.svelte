@@ -63,6 +63,7 @@
   function setFillClass(cls) {
       fill_class = cls;
       contentUpdated();
+      disaptchChange();
   }
 
   const FILL_CLASS_NAME = 'fill';
