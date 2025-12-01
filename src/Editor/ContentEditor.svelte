@@ -374,12 +374,18 @@
 
 		arr_elms.forEach(e => delete e.selected)
 		let selection = window.getSelection()
+        if (selection === null) {
+            return;
+        }
 		let selection_txt = selection.toString()
 
 		let	start_i = h_selection ? h_selection.start_i : selection.anchorOffset
 		let end_i = h_selection ? h_selection.end_i : selection.focusOffset
 
 		let b_node = h_selection ? h_selection.b_node : selection.anchorNode
+        if (!b_node) {
+            return;
+        }
 		let e_node = h_selection ? h_selection.e_node : selection.focusNode
 
 		let b_index = getIndex(b_node)
