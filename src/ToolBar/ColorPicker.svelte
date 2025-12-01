@@ -31,6 +31,7 @@
 	function selectColor(evt){
 		setClass(txt+"-"+evt.detail)		
 		selected_color = evt.detail
+        hideColors();
 	}
 
 	function showColors(e){
