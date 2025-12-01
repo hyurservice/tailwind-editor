@@ -8,6 +8,7 @@
 
   export let editable = false
   export let tools;
+  /** @type {string | null | undefined} */
   export let html = "";
   export let uid = null;
 
@@ -68,7 +69,7 @@
 
   function extractFillClass(html) {
       if (!html) {
-          return {inner_html: html};
+          return {inner_html: ''};
       }
       let div = document.createElement('div')
       div.innerHTML = html
